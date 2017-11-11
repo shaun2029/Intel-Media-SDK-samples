@@ -2055,11 +2055,30 @@ mfxStatus CTranscodingPipeline::InitEncMfxParams(sInputParams *pInParams)
     }
     m_mfxEncParams.mfx.NumSlice                = pInParams->nSlices;
 
+    bool addCodingOpt3 = false;
+
     if (pInParams->nRateControlMethod == MFX_RATECONTROL_CQP)
     {
         m_mfxEncParams.mfx.QPI = pInParams->nQPI;
         m_mfxEncParams.mfx.QPP = pInParams->nQPP;
         m_mfxEncParams.mfx.QPB = pInParams->nQPB;
+    }
+	else if (pInParams->nRateControlMethod == MFX_RATECONTROL_QVBR)
+    {
+		/*
+		m_mfxEncParams.mfx.ICQQuality = pInParams->nICQQuality;
+		m_CodingOption2.Trellis = MFX_TRELLIS_I | MFX_TRELLIS_P | MFX_TRELLIS_I;
+		m_EncExtParams.push_back((mfxExtBuffer *)&m_CodingOption2);
+		*/
+		/* Use the standard VBR settings for QVBR */
+		pInParams->nRateControlMethod = MFX_RATECONTROL_VBR;
+		m_mfxEncParams.mfx.RateControlMethod = MFX_RATECONTROL_QVBR;
+
+		addCodingOpt3 = true;
+		m_CodingOption3.QVBRQuality = pInParams->nQVBRQuality;
+
+		m_CodingOption2.BRefType = MFX_B_REF_OFF;
+		m_EncExtParams.push_back((mfxExtBuffer *)&m_CodingOption2);
     }
 
     if(pInParams->enableQSVFF)
@@ -2157,8 +2176,6 @@ MFX_IOPATTERN_IN_VIDEO_MEMORY : MFX_IOPATTERN_IN_SYSTEM_MEMORY);
         m_CodingOption2.ExtBRC = (pInParams->EncodeId == MFX_CODEC_HEVC || pInParams->EncodeId == MFX_CODEC_AVC) ? pInParams->nExtBRC : 0;
         m_EncExtParams.push_back((mfxExtBuffer *)&m_CodingOption2);
     }
-
-    bool addCodingOpt3 = false;
 
     if (pInParams->WinBRCMaxAvgKbps || pInParams->WinBRCSize)
     {

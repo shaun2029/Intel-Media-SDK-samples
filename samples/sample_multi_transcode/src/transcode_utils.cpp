@@ -170,6 +170,9 @@ void TranscodingSample::PrintHelp()
     msdk_printf(MSDK_STRING("                May be 1 in the case when -mss option is specified \n"));
     msdk_printf(MSDK_STRING("  -la_ext       Use external LA plugin (compatible with h264 & hevc encoders)\n"));
     msdk_printf(MSDK_STRING("  -vbr          Variable bitrate control\n"));
+    msdk_printf(MSDK_STRING("  -qvbr <quality>         QVBR bitrate control method tries to achieve the subjective quality with minimum no. of bits while trying to keep the bitrate constant.\n"));
+    msdk_printf(MSDK_STRING("                          The quality parameter inrange [1,51] 1 is the best quality. Requires VBR settings -b and -MaxKbps. \n"));
+    msdk_printf(MSDK_STRING("                          QVBR is supported from 4th generation Intel® Core processor(codename Haswell) onward.\n"));
     msdk_printf(MSDK_STRING("  -hrd <KB>     Maximum possible size of any compressed frames \n"));
     msdk_printf(MSDK_STRING("  -wb <KBps>    Maximum bitrate for sliding window \n"));
     msdk_printf(MSDK_STRING("  -ws           Sliding window size in frames\n"));
@@ -238,6 +241,8 @@ void TranscodingSample::PrintHelp()
     msdk_printf(MSDK_STRING("Examples:\n"));
     msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mpeg2 in.mpeg2 -o::h264 out.h264\n"));
     msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -w 320 -h 240\n"));
+    msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -w 320 -h 240\n"));
+    msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -repartitioncheck::on -icq 17 -b 20000 -MaxKbps 38000 -u 1 -l 1 -dist 3 -gop_size 12 -async 4 -hw_d3d11\n"));
 }
 
 void TranscodingSample::PrintInfo(mfxU32 session_number, sInputParams* pParams, mfxVersion *pVer)
@@ -1375,6 +1380,17 @@ mfxStatus CmdProcessor::ParseParamsForOneSession(mfxU32 argc, msdk_char *argv[])
         else if (0 == msdk_strcmp(argv[i], MSDK_STRING("-vbr")))
         {
             InputParams.nRateControlMethod = MFX_RATECONTROL_VBR;
+        }
+        else if (0 == msdk_strcmp(argv[i], MSDK_STRING("-qvbr")))
+        {
+            InputParams.nRateControlMethod = MFX_RATECONTROL_QVBR;
+
+            VAL_CHECK(i + 1 == argc, i, argv[i]);
+            if (MFX_ERR_NONE != msdk_opt_read(argv[++i], InputParams.nQVBRQuality))
+            {
+                PrintError(MSDK_STRING("Quality setting for QVBR is invalid (-qvbr <1-51>"));
+                return MFX_ERR_UNSUPPORTED;
+            }
         }
         else if (0 == msdk_strcmp(argv[i], MSDK_STRING("-bpyr")))
         {
