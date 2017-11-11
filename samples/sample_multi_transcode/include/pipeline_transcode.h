@@ -195,6 +195,7 @@ namespace TranscodingSample
         mfxU16 nQPI;
         mfxU16 nQPP;
         mfxU16 nQPB;
+		mfxU16 nQVBRQuality;
 
 #if _MSDK_API >= MSDK_API(1,22)
         std::vector<mfxExtEncoderROI> m_ROIData;
