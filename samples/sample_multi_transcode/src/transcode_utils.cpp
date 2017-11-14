@@ -242,7 +242,7 @@ void TranscodingSample::PrintHelp()
     msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mpeg2 in.mpeg2 -o::h264 out.h264\n"));
     msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -w 320 -h 240\n"));
     msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -w 320 -h 240\n"));
-    msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -repartitioncheck::on -icq 17 -b 20000 -MaxKbps 38000 -u 1 -l 1 -dist 3 -gop_size 12 -async 4 -hw_d3d11\n"));
+    msdk_printf(MSDK_STRING("  sample_multi_transcode -i::mvc in.mvc -o::mvc out.mvc -repartitioncheck::on -qvbr 17 -b 20000 -MaxKbps 38000 -u 1 -l 1 -dist 3 -gop_size 12 -async 4 -hw_d3d11\n"));
 }
 
 void TranscodingSample::PrintInfo(mfxU32 session_number, sInputParams* pParams, mfxVersion *pVer)
