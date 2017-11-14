@@ -1637,7 +1637,7 @@ mfxStatus CTranscodingPipeline::Transcode()
                 outputStatistics.ResetStatistics();
             }
         }
-        else if (0 == (m_nProcessedFramesNum - 1) % 100)
+        else if (0 == (m_nProcessedFramesNum - 1) % (24*60))
         {
             msdk_printf(MSDK_STRING("."));
         }
