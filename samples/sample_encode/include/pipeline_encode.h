@@ -228,7 +228,6 @@ protected:
     MFXVideoVPP* m_pmfxVPP;
 
     mfxVideoParam m_mfxEncParams;
-    mfxVideoParam m_mfxMVCEncParams;
     mfxVideoParam m_mfxVppParams;
 
     mfxU16 m_MVCflags; // MVC codec is in use

@@ -1447,12 +1447,6 @@ mfxStatus CEncodingPipeline::ResetMFXComponents(sInputParams* pParams)
     m_mfxEncParams.mfx.FrameInfo.FourCC       = m_mfxVppParams.vpp.Out.FourCC;
     m_mfxEncParams.mfx.FrameInfo.ChromaFormat = m_mfxVppParams.vpp.Out.ChromaFormat;
 
-    if (!m_EncExtParams.empty())
-    {
-        m_mfxEncParams.ExtParam = &m_EncExtParams[0]; // vector is stored linearly in memory
-        m_mfxEncParams.NumExtParam = (mfxU16)m_EncExtParams.size();
-    }
-
     sts = m_pmfxENC->Init(&m_mfxEncParams);
     if (MFX_WRN_PARTIAL_ACCELERATION == sts)
     {
