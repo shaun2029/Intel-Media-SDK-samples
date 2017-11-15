@@ -180,7 +180,8 @@ void TranscodingSample::PrintHelp()
     msdk_printf(MSDK_STRING("  -dist         Distance between I- or P- key frames \n"));
     msdk_printf(MSDK_STRING("  -num_ref      Number of reference frames\n"));
     msdk_printf(MSDK_STRING("  -bref         Arrange B frames in B pyramid reference structure\n"));
-    msdk_printf(MSDK_STRING("  -CodecProfile          - Specifies codec profile\n"));
+    msdk_printf(MSDK_STRING("  -bref:off     B reame reference off.\n"));
+    msdk_printf(MSDK_STRING("  -CodecProfile          - Specifies codec profile (default 41)\n"));
     msdk_printf(MSDK_STRING("  -CodecLevel            - Specifies codec level\n"));
     msdk_printf(MSDK_STRING("  -GopOptFlag:closed     - Closed gop\n"));
     msdk_printf(MSDK_STRING("  -GopOptFlag:strict     - Strict gop\n"));
@@ -1014,6 +1015,10 @@ mfxStatus CmdProcessor::ParseParamsForOneSession(mfxU32 argc, msdk_char *argv[])
         else if (0 == msdk_strcmp(argv[i], MSDK_STRING("-bref")))
         {
             InputParams.nBRefType = MFX_B_REF_PYRAMID;
+        }
+        else if (0 == msdk_strcmp(argv[i], MSDK_STRING("-bref:off")))
+        {
+            InputParams.nBRefType = MFX_B_REF_OFF;
         }
         else if(0 == msdk_strcmp(argv[i], MSDK_STRING("-u")))
         {
