@@ -326,6 +326,17 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
         {
             pParams->nRateControlMethod = MFX_RATECONTROL_VBR;
         }
+        else if (0 == msdk_strcmp(strInput[i], MSDK_STRING("-qvbr")))
+        {
+            pParams->nRateControlMethod = MFX_RATECONTROL_QVBR;
+
+            VAL_CHECK(i+1 >= nArgNum, i, strInput[i]);
+            if (MFX_ERR_NONE != msdk_opt_read(strInput[++i], pParams->nQVBRQuality))
+            {
+                PrintHelp(strInput[0], MSDK_STRING("Quality for qvpr is invalid"));
+                return MFX_ERR_UNSUPPORTED;
+            }
+        }
         else if (0 == msdk_strcmp(strInput[i], MSDK_STRING("-mss")))
         {
             VAL_CHECK(i+1 >= nArgNum, i, strInput[i]);
@@ -872,7 +883,7 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
         pParams->numViews = nviews;
     }
 
-    if (MFX_TARGETUSAGE_BEST_QUALITY != pParams->nTargetUsage && MFX_TARGETUSAGE_BEST_SPEED != pParams->nTargetUsage)
+    if (pParams->nTargetUsage < MFX_TARGETUSAGE_BEST_QUALITY || pParams->nTargetUsage > MFX_TARGETUSAGE_BEST_SPEED)
     {
         pParams->nTargetUsage = MFX_TARGETUSAGE_BALANCED;
     }

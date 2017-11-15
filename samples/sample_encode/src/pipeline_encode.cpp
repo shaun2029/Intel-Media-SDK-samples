@@ -400,6 +400,12 @@ mfxStatus CEncodingPipeline::InitMfxEncParams(sInputParams *pInParams)
         m_mfxEncParams.mfx.QPP = pInParams->nQPP;
         m_mfxEncParams.mfx.QPB = pInParams->nQPB;
     }
+	else if (m_mfxEncParams.mfx.RateControlMethod == MFX_RATECONTROL_QVBR)
+    {
+        m_mfxEncParams.mfx.TargetKbps = pInParams->nBitRate; // in Kbps
+		m_CodingOption3.QVBRQuality = pInParams->nQVBRQuality;
+		m_EncExtParams.push_back((mfxExtBuffer *)&m_CodingOption3);
+    }
     else
     {
         m_mfxEncParams.mfx.TargetKbps = pInParams->nBitRate; // in Kbps
@@ -1441,6 +1447,12 @@ mfxStatus CEncodingPipeline::ResetMFXComponents(sInputParams* pParams)
     m_mfxEncParams.mfx.FrameInfo.FourCC       = m_mfxVppParams.vpp.Out.FourCC;
     m_mfxEncParams.mfx.FrameInfo.ChromaFormat = m_mfxVppParams.vpp.Out.ChromaFormat;
 
+    if (!m_EncExtParams.empty())
+    {
+        m_mfxEncParams.ExtParam = &m_EncExtParams[0]; // vector is stored linearly in memory
+        m_mfxEncParams.NumExtParam = (mfxU16)m_EncExtParams.size();
+    }
+
     sts = m_pmfxENC->Init(&m_mfxEncParams);
     if (MFX_WRN_PARTIAL_ACCELERATION == sts)
     {
@@ -1940,20 +1952,49 @@ void CEncodingPipeline::PrintInfo()
     msdk_printf(MSDK_STRING("\tCrop X,Y,W,H\t%d,%d,%d,%d\n"), DstPicInfo.CropX, DstPicInfo.CropY, DstPicInfo.CropW, DstPicInfo.CropH);
 
     msdk_printf(MSDK_STRING("Frame rate\t%.2f\n"), DstPicInfo.FrameRateExtN * 1.0 / DstPicInfo.FrameRateExtD);
-    if (m_mfxEncParams.mfx.RateControlMethod != MFX_RATECONTROL_CQP)
+    if (m_mfxEncParams.mfx.RateControlMethod == MFX_RATECONTROL_QVBR)
     {
-        msdk_printf(MSDK_STRING("Bit rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.TargetKbps);
+		msdk_printf(MSDK_STRING("Bit rate control\tQVBR\n"));
+		msdk_printf(MSDK_STRING("Qvbr Quality\t%d\n"), m_CodingOption3.QVBRQuality);
+		msdk_printf(MSDK_STRING("Bit rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.TargetKbps);
+    }
+    else if (m_mfxEncParams.mfx.RateControlMethod != MFX_RATECONTROL_CQP)
+    {
+		msdk_printf(MSDK_STRING("Bit rate control\tVBR\n"));
+		msdk_printf(MSDK_STRING("Bit rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.TargetKbps);
     }
     else
     {
+		msdk_printf(MSDK_STRING("Bit rate control\tCQP\n"));
         msdk_printf(MSDK_STRING("QPI\t%d\nQPP\t%d\nQPB\t%d\n"), m_mfxEncParams.mfx.QPI, m_mfxEncParams.mfx.QPP, m_mfxEncParams.mfx.QPB);
-
     }
-    msdk_printf(MSDK_STRING("Gop size\t%d\n"), m_mfxEncParams.mfx.GopPicSize);
+
+	if (m_mfxEncParams.mfx.CodecProfile == MFX_PROFILE_AVC_STEREO_HIGH)
+    {
+		msdk_printf(MSDK_STRING("Codec profile\tSTEREO HIGH\n"));
+    }
+	else if (m_mfxEncParams.mfx.CodecProfile == MFX_PROFILE_AVC_HIGH)
+    {
+		msdk_printf(MSDK_STRING("Codec profile\tHIGH\n"));
+    }
+	else if (m_mfxEncParams.mfx.CodecProfile == MFX_PROFILE_AVC_MAIN)
+    {
+		msdk_printf(MSDK_STRING("Codec profile\tMAIN\n"));
+    }
+	else
+    {
+		msdk_printf(MSDK_STRING("Codec profile\t%d\n"), m_mfxEncParams.mfx.CodecProfile);
+    }
+
+	msdk_printf(MSDK_STRING("Codec level\t%d.%d\n"), m_mfxEncParams.mfx.CodecLevel / 10, m_mfxEncParams.mfx.CodecLevel % 10);
+
+	msdk_printf(MSDK_STRING("Gop size\t%d\n"), m_mfxEncParams.mfx.GopPicSize);
     msdk_printf(MSDK_STRING("Ref dist\t%d\n"), m_mfxEncParams.mfx.GopRefDist);
     msdk_printf(MSDK_STRING("Ref number\t%d\n"), m_mfxEncParams.mfx.NumRefFrame);
     msdk_printf(MSDK_STRING("Idr Interval\t%d\n"), m_mfxEncParams.mfx.IdrInterval);
     msdk_printf(MSDK_STRING("Target usage\t%s\n"), TargetUsageToStr(m_mfxEncParams.mfx.TargetUsage));
+
+
 
     const msdk_char* sMemType =
 #if defined(_WIN32) || defined(_WIN64)
