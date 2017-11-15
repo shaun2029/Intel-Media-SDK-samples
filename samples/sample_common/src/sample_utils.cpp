@@ -74,6 +74,91 @@ CSmplYUVReader::CSmplYUVReader()
     shouldShiftP010High  = false;
 }
 
+mfxStatus PipeOpen(const wchar_t *filename, FILE **f)
+{
+   HANDLE hPipe; 
+   LPTSTR lpvMessage=TEXT("Default message from client."); 
+   BOOL   fSuccess = FALSE; 
+   DWORD  cbRead, cbToWrite, cbWritten, dwMode; 
+   LPTSTR lpszPipename = (LPTSTR)filename;  
+   
+   int timeout = 20;
+
+   while (1) 
+   { 
+      hPipe = CreateFile( 
+         lpszPipename,   // pipe name 
+         GENERIC_READ, 
+         0,              // no sharing 
+         NULL,           // default security attributes
+         OPEN_EXISTING,  // opens existing pipe 
+         0,              // default attributes 
+         NULL);          // no template file 
+ 
+   // Break if the pipe handle is valid. 
+ 
+      if (hPipe != INVALID_HANDLE_VALUE) 
+         break; 
+ 
+      // Exit if an error other than ERROR_PIPE_BUSY occurs. 
+ 
+      if (GetLastError() != ERROR_PIPE_BUSY) 
+      {
+		  if (!timeout) {
+			 _tprintf( TEXT("Could not open pipe. GLE=%d\n"), GetLastError() ); 
+			 return MFX_ERR_INVALID_HANDLE;
+		  }
+		  else {
+			Sleep(1000);
+			timeout--;
+		  }
+      }
+	  else {
+		  // All pipe instances are busy, so wait for 20 seconds. 
+ 
+		  if ( ! WaitNamedPipe(lpszPipename, 20000)) 
+		  { 
+			 printf("Could not open pipe: 20 second wait timed out."); 
+			 return MFX_ERR_INVALID_HANDLE;
+		  }
+	  }
+   } 
+
+   *f = new FILE;
+   FILE *file = *f; 
+   file->_base = (char*)hPipe; 
+   printf("Opened pipe."); 
+
+   return MFX_ERR_NONE;
+}
+
+mfxStatus PipeClose(FILE* f)
+{
+   HANDLE hPipe = (void*) f->_base; 
+   if (hPipe) {
+	   CloseHandle(hPipe);
+	   f->_base = 0;
+       printf("Closed pipe."); 
+   }
+
+   return MFX_ERR_NONE;
+}
+
+int PipeRead(void *buffer, size_t elementSize, size_t count, FILE *f)
+{
+    HANDLE hPipe = (void*) f->_base; 
+    DWORD numBytesRead = 0;
+    BOOL result = ReadFile(
+        hPipe,
+        buffer, // the data from the pipe will be put here
+        elementSize * count, // number of bytes allocated
+        &numBytesRead, // this will store number of bytes actually read
+        NULL // not using overlapped IO
+    );
+
+	return numBytesRead;
+}
+
 mfxStatus CSmplYUVReader::Init(std::list<msdk_string> inputs, mfxU32 ColorFormat, bool shouldShiftP010)
 {
     Close();
@@ -102,9 +187,13 @@ mfxStatus CSmplYUVReader::Init(std::list<msdk_string> inputs, mfxU32 ColorFormat
 
     for (ls_iterator it = inputs.begin(); it != inputs.end(); it++)
     {
-        FILE *f = 0;
-        MSDK_FOPEN(f, (*it).c_str(), MSDK_STRING("rb"));
-        MSDK_CHECK_POINTER(f, MFX_ERR_NULL_PTR);
+		FILE *f = 0;
+
+		PipeOpen((*it).c_str(), &f);
+
+//        MSDK_FOPEN(f, (*it).c_str(), MSDK_STRING("rb"));
+
+		MSDK_CHECK_POINTER(f, MFX_ERR_NULL_PTR);
 
         m_files.push_back(f);
     }
@@ -125,7 +214,9 @@ void CSmplYUVReader::Close()
 {
     for (mfxU32 i = 0; i < m_files.size(); i++)
     {
-        fclose(m_files[i]);
+//        fclose(m_files[i]);
+        PipeClose(m_files[i]);
+
     }
     m_files.clear();
     m_bInited = false;
@@ -185,7 +276,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
 
             for(i = 0; i < h; i++)
             {
-                nBytesRead = (mfxU32)fread(ptr + i * pitch, 1, 4*w, m_files[vid]);
+                nBytesRead = (mfxU32)PipeRead(ptr + i * pitch, 1, 4*w, m_files[vid]);
 
                 if ((mfxU32)4*w != nBytesRead)
                 {
@@ -199,7 +290,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
 
             for(i = 0; i < h; i++)
             {
-                nBytesRead = (mfxU32)fread(ptr + i * pitch, 1, 2*w, m_files[vid]);
+                nBytesRead = (mfxU32)PipeRead(ptr + i * pitch, 1, 2*w, m_files[vid]);
 
                 if ((mfxU32)2*w != nBytesRead)
                 {
@@ -219,7 +310,8 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
         // read luminance plane
         for(i = 0; i < h; i++)
         {
-            nBytesRead = (mfxU32)fread(ptr + i * pitch, nBytesPerPixel, w, m_files[vid]);
+			  nBytesRead = (mfxU32)PipeRead(ptr + i * pitch, nBytesPerPixel, w, m_files[vid]);
+//            nBytesRead = (mfxU32)fread(ptr + i * pitch, nBytesPerPixel, w, m_files[vid]);
 
             if (w != nBytesRead)
             {
@@ -267,7 +359,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
                 // load first chroma plane: U (input == I420) or V (input == YV12)
                 for (i = 0; i < h; i++)
                 {
-                    nBytesRead = (mfxU32)fread(buf, 1, w, m_files[vid]);
+                    nBytesRead = (mfxU32)PipeRead(buf, 1, w, m_files[vid]);
                     if (w != nBytesRead)
                     {
                         return MFX_ERR_MORE_DATA;
@@ -282,7 +374,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
                 for (i = 0; i < h; i++)
                 {
 
-                    nBytesRead = (mfxU32)fread(buf, 1, w, m_files[vid]);
+                    nBytesRead = (mfxU32)PipeRead(buf, 1, w, m_files[vid]);
 
                     if (w != nBytesRead)
                     {
@@ -311,7 +403,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
                 for(i = 0; i < h; i++)
                 {
 
-                    nBytesRead = (mfxU32)fread(ptr + i * pitch, 1, w, m_files[vid]);
+                    nBytesRead = (mfxU32)PipeRead(ptr + i * pitch, 1, w, m_files[vid]);
 
                     if (w != nBytesRead)
                     {
@@ -320,7 +412,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
                 }
                 for(i = 0; i < h; i++)
                 {
-                    nBytesRead = (mfxU32)fread(ptr2 + i * pitch, 1, w, m_files[vid]);
+                    nBytesRead = (mfxU32)PipeRead(ptr2 + i * pitch, 1, w, m_files[vid]);
 
                     if (w != nBytesRead)
                     {
@@ -342,7 +434,7 @@ mfxStatus CSmplYUVReader::LoadNextFrame(mfxFrameSurface1* pSurface)
             ptr  = pData.UV + pInfo.CropX + (pInfo.CropY / 2) * pitch;
             for(i = 0; i < h; i++)
             {
-                nBytesRead = (mfxU32)fread(ptr + i * pitch, nBytesPerPixel, w, m_files[vid]);
+                nBytesRead = (mfxU32)PipeRead(ptr + i * pitch, nBytesPerPixel, w, m_files[vid]);
 
                 if (w != nBytesRead)
                 {
@@ -560,7 +652,7 @@ mfxStatus CSmplBitstreamReader::ReadNextFrame(mfxBitstream *pBS)
 
     memmove(pBS->Data, pBS->Data + pBS->DataOffset, pBS->DataLength);
     pBS->DataOffset = 0;
-    nBytesRead = (mfxU32)fread(pBS->Data + pBS->DataLength, 1, pBS->MaxLength - pBS->DataLength, m_fSource);
+    nBytesRead = (mfxU32)PipeRead(pBS->Data + pBS->DataLength, 1, pBS->MaxLength - pBS->DataLength, m_fSource);
 
     if (0 == nBytesRead)
     {
@@ -613,7 +705,7 @@ CIVFFrameReader::CIVFFrameReader()
 
 #define READ_BYTES(pBuf, size)\
 {\
-    mfxU32 nBytesRead = (mfxU32)fread(pBuf, 1, size, m_fSource);\
+    mfxU32 nBytesRead = (mfxU32)PipeRead(pBuf, 1, size, m_fSource);\
     if (nBytesRead !=size)\
         return MFX_ERR_MORE_DATA;\
 }\
@@ -1398,6 +1490,13 @@ mfxU16 StrToTargetUsage(msdk_char* strInput)
     {
         tu = MFX_TARGETUSAGE_BEST_SPEED;
     }
+	else 
+	{
+		mfxU16 value = (mfxU16)atoi((const char*)strInput);
+		if ((value >= 1) && (value <= 7)) {
+			tu = value;
+		}
+	}
 
     return tu;
 }
@@ -1412,6 +1511,14 @@ const msdk_char* TargetUsageToStr(mfxU16 tu)
         return MSDK_STRING("quality");
     case MFX_TARGETUSAGE_BEST_SPEED:
         return MSDK_STRING("speed");
+    case MFX_TARGETUSAGE_2:
+        return MSDK_STRING("2");
+    case MFX_TARGETUSAGE_3:
+        return MSDK_STRING("3");
+    case MFX_TARGETUSAGE_5:
+        return MSDK_STRING("5");
+    case MFX_TARGETUSAGE_6:
+        return MSDK_STRING("6");
     case MFX_TARGETUSAGE_UNKNOWN:
         return MSDK_STRING("unknown");
     default:

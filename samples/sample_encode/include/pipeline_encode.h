@@ -111,6 +111,8 @@ struct sInputParams
     mfxU16 nQPP;
     mfxU16 nQPB;
 
+	mfxU16 nQVBRQuality;
+
     mfxU16 nGPB;
     mfxU16 nExtBRC;
 
@@ -226,6 +228,7 @@ protected:
     MFXVideoVPP* m_pmfxVPP;
 
     mfxVideoParam m_mfxEncParams;
+    mfxVideoParam m_mfxMVCEncParams;
     mfxVideoParam m_mfxVppParams;
 
     mfxU16 m_MVCflags; // MVC codec is in use
