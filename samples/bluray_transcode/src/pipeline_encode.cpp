@@ -96,7 +96,7 @@ mfxStatus CEncTaskPool::Init(MFXVideoSession* pmfxSession, CSmplBitstreamWriter*
     m_pmfxSession = pmfxSession;
     m_nPoolSize = nPoolSize;
 
-    m_pTasks = new sTask [m_nPoolSize];
+    m_pTasks = new sEncTask [m_nPoolSize];
     MSDK_CHECK_POINTER(m_pTasks, MFX_ERR_MEMORY_ALLOC);
 
     mfxStatus sts = MFX_ERR_NONE;
@@ -207,7 +207,7 @@ mfxU32 CEncTaskPool::GetFreeTaskIndex()
     return (m_nTaskBufferStart + off) % m_nPoolSize;
 }
 
-mfxStatus CEncTaskPool::GetFreeTask(sTask **ppTask)
+mfxStatus CEncTaskPool::GetFreeTask(sEncTask **ppTask)
 {
     MSDK_CHECK_POINTER(ppTask, MFX_ERR_NULL_PTR);
     MSDK_CHECK_POINTER(m_pTasks, MFX_ERR_NOT_INITIALIZED);
@@ -242,14 +242,14 @@ void CEncTaskPool::Close()
     m_nPoolSize = 0;
 }
 
-sTask::sTask()
+sEncTask::sEncTask()
     : EncSyncP(0)
     , pWriter(NULL)
 {
     MSDK_ZERO_MEMORY(mfxBS);
 }
 
-mfxStatus sTask::Init(mfxU32 nBufferSize, CSmplBitstreamWriter *pwriter)
+mfxStatus sEncTask::Init(mfxU32 nBufferSize, CSmplBitstreamWriter *pwriter)
 {
     Close();
 
@@ -264,7 +264,7 @@ mfxStatus sTask::Init(mfxU32 nBufferSize, CSmplBitstreamWriter *pwriter)
     return sts;
 }
 
-mfxStatus sTask::Close()
+mfxStatus sEncTask::Close()
 {
     WipeMfxBitstream(&mfxBS);
     EncSyncP = 0;
@@ -273,7 +273,7 @@ mfxStatus sTask::Close()
     return MFX_ERR_NONE;
 }
 
-mfxStatus sTask::WriteBitstream()
+mfxStatus sEncTask::WriteBitstream()
 {
     if (pWriter)
         return pWriter->WriteNextFrame(&mfxBS);
@@ -281,7 +281,7 @@ mfxStatus sTask::WriteBitstream()
         return MFX_ERR_NONE;
 }
 
-mfxStatus sTask::Reset()
+mfxStatus sEncTask::Reset()
 {
     // mark sync point as free
     EncSyncP = NULL;
@@ -377,7 +377,7 @@ void CEncodingPipeline::FreeVppDoNotUse()
     MSDK_SAFE_DELETE_ARRAY(m_VppDoNotUse.AlgList);
 }
 
-mfxStatus CEncodingPipeline::InitMfxEncParams(sInputParams *pInParams)
+mfxStatus CEncodingPipeline::InitMfxEncParams(sEncInputParams *pInParams)
 {
     m_mfxEncParams.mfx.CodecId                 = pInParams->CodecId;
     m_mfxEncParams.mfx.TargetUsage             = pInParams->nTargetUsage; // trade-off between quality and speed
@@ -422,7 +422,7 @@ mfxStatus CEncodingPipeline::InitMfxEncParams(sInputParams *pInParams)
 
 
     // specify memory type
-    if (D3D9_MEMORY == pInParams->memType || D3D11_MEMORY == pInParams->memType)
+	if (ENC_D3D9_MEMORY == pInParams->memType || ENC_D3D11_MEMORY == pInParams->memType)
     {
         m_mfxEncParams.IOPattern = MFX_IOPATTERN_IN_VIDEO_MEMORY;
     }
@@ -531,12 +531,12 @@ mfxU32 CEncodingPipeline::FileFourCC2EncFourCC(mfxU32 fcc)
         return fcc;
 }
 
-mfxStatus CEncodingPipeline::InitMfxVppParams(sInputParams *pInParams)
+mfxStatus CEncodingPipeline::InitMfxVppParams(sEncInputParams *pInParams)
 {
     MSDK_CHECK_POINTER(pInParams,  MFX_ERR_NULL_PTR);
 
     // specify memory type
-    if (D3D9_MEMORY == pInParams->memType || D3D11_MEMORY == pInParams->memType)
+    if (ENC_D3D9_MEMORY == pInParams->memType || ENC_D3D11_MEMORY == pInParams->memType)
     {
         m_mfxVppParams.IOPattern = MFX_IOPATTERN_IN_VIDEO_MEMORY | MFX_IOPATTERN_OUT_VIDEO_MEMORY;
     }
@@ -638,7 +638,7 @@ mfxStatus CEncodingPipeline::CreateHWDevice()
 
 mfxStatus CEncodingPipeline::ResetDevice()
 {
-    if (D3D9_MEMORY == m_memType || D3D11_MEMORY == m_memType)
+    if (ENC_D3D9_MEMORY == m_memType || ENC_D3D11_MEMORY == m_memType)
     {
         return m_hwdev->Reset();
     }
@@ -779,7 +779,7 @@ mfxStatus CEncodingPipeline::CreateAllocator()
 {
     mfxStatus sts = MFX_ERR_NONE;
 
-    if (D3D9_MEMORY == m_memType || D3D11_MEMORY == m_memType)
+    if (ENC_D3D9_MEMORY == m_memType || ENC_D3D11_MEMORY == m_memType)
     {
 #if D3D_SURFACES_SUPPORT
         sts = CreateHWDevice();
@@ -939,7 +939,7 @@ CEncodingPipeline::CEncodingPipeline()
     m_pmfxVPP = NULL;
     m_pMFXAllocator = NULL;
     m_pmfxAllocatorParams = NULL;
-    m_memType = SYSTEM_MEMORY;
+    m_memType = ENC_SYSTEM_MEMORY;
     m_bExternalAlloc = false;
     m_pEncSurfaces = NULL;
     m_pVppSurfaces = NULL;
@@ -1020,7 +1020,7 @@ mfxStatus CEncodingPipeline::InitFileWriter(CSmplBitstreamWriter **ppWriter, con
     return sts;
 }
 
-mfxStatus CEncodingPipeline::InitFileWriters(sInputParams *pParams)
+mfxStatus CEncodingPipeline::InitFileWriters(sEncInputParams *pParams)
 {
     MSDK_CHECK_POINTER(pParams, MFX_ERR_NULL_PTR);
 
@@ -1082,7 +1082,7 @@ mfxStatus CEncodingPipeline::InitFileWriters(sInputParams *pParams)
     return sts;
 }
 
-mfxStatus CEncodingPipeline::Init(sInputParams *pParams)
+mfxStatus CEncodingPipeline::Init(sEncInputParams *pParams, CFrameFifo *pFrameFifo)
 {
     MSDK_CHECK_POINTER(pParams, MFX_ERR_NULL_PTR);
 
@@ -1117,7 +1117,7 @@ mfxStatus CEncodingPipeline::Init(sInputParams *pParams)
 
         // if d3d11 surfaces are used ask the library to run acceleration through D3D11
         // feature may be unsupported due to OS or MSDK API version
-        if (D3D11_MEMORY == pParams->memType)
+        if (ENC_D3D11_MEMORY == pParams->memType)
             initPar.Implementation |= MFX_IMPL_VIA_D3D11;
 
         // Library should pick first available compatible adapter during InitEx call with MFX_IMPL_HARDWARE_ANY
@@ -1209,10 +1209,10 @@ mfxStatus CEncodingPipeline::Init(sInputParams *pParams)
     }
 
     // Determine if we should shift P010 surfaces
-    pParams->shouldUseShiftedP010VPP = m_pmfxVPP && pParams->memType != SYSTEM_MEMORY &&
+    pParams->shouldUseShiftedP010VPP = m_pmfxVPP && pParams->memType != ENC_SYSTEM_MEMORY &&
         pParams->FileInputFourCC == MFX_FOURCC_P010;
 
-    pParams->shouldUseShiftedP010Enc = pParams->memType != SYSTEM_MEMORY &&
+    pParams->shouldUseShiftedP010Enc = pParams->memType != ENC_SYSTEM_MEMORY &&
         pParams->FileInputFourCC == MFX_FOURCC_P010 &&
         AreGuidsEqual(pParams->pluginParams.pluginGuid, MFX_PLUGINID_HEVCE_HW);
     bool readerShift = m_pmfxVPP ? pParams->shouldUseShiftedP010VPP  : pParams->shouldUseShiftedP010Enc;
@@ -1229,11 +1229,11 @@ mfxStatus CEncodingPipeline::Init(sInputParams *pParams)
     }
 
     // Preparing readers and writers
-    if (!isV4L2InputEnabled)
+	if (!isV4L2InputEnabled)
     {
         // prepare input file reader
         sts = m_FileReader.Init(pParams->InputFiles,
-            pParams->FileInputFourCC,readerShift);
+            pParams->FileInputFourCC,readerShift, pFrameFifo);
         MSDK_CHECK_STATUS(sts, "m_FileReader.Init failed");
     }
 
@@ -1281,7 +1281,7 @@ mfxStatus CEncodingPipeline::Init(sInputParams *pParams)
     return MFX_ERR_NONE;
 }
 
-void CEncodingPipeline::InitV4L2Pipeline(sInputParams *pParams)
+void CEncodingPipeline::InitV4L2Pipeline(sEncInputParams *pParams)
 {
 #if defined (ENABLE_V4L2_SUPPORT)
     if (isV4L2InputEnabled)
@@ -1401,7 +1401,7 @@ void CEncodingPipeline::FreeFileWriters()
 
 mfxStatus CEncodingPipeline::FillBuffers()
 {
-    if (m_nMemBuffer)
+	if (m_nMemBuffer)
     {
         for (mfxU32 i = 0; i < m_nMemBuffer; i++)
         {
@@ -1418,7 +1418,7 @@ mfxStatus CEncodingPipeline::FillBuffers()
     return MFX_ERR_NONE;
 }
 
-mfxStatus CEncodingPipeline::ResetMFXComponents(sInputParams* pParams)
+mfxStatus CEncodingPipeline::ResetMFXComponents(sEncInputParams* pParams)
 {
     MSDK_CHECK_POINTER(pParams, MFX_ERR_NULL_PTR);
     MSDK_CHECK_POINTER(m_pmfxENC, MFX_ERR_NOT_INITIALIZED);
@@ -1496,7 +1496,7 @@ mfxStatus CEncodingPipeline::AllocateSufficientBuffer(mfxBitstream* pBS)
     return MFX_ERR_NONE;
 }
 
-mfxStatus CEncodingPipeline::GetFreeTask(sTask **ppTask)
+mfxStatus CEncodingPipeline::GetFreeTask(sEncTask **ppTask)
 {
     mfxStatus sts = MFX_ERR_NONE;
 
@@ -1537,7 +1537,7 @@ mfxStatus CEncodingPipeline::Run()
 
     mfxFrameSurface1* pSurf = NULL; // dispatching pointer
 
-    sTask *pCurrentTask = NULL; // a pointer to the current task
+    sEncTask *pCurrentTask = NULL; // a pointer to the current task
     mfxU16 nEncSurfIdx = 0;     // index of free surface for encoder input (vpp output)
     mfxU16 nVppSurfIdx = 0;     // index of free surface for vpp input
 
@@ -1618,7 +1618,7 @@ mfxStatus CEncodingPipeline::Run()
             }
 
             pSurf->Info.FrameId.ViewId = currViewNum;
-
+			
             m_statFile.StartTimeMeasurement();
             sts = LoadNextFrame(pSurf);
             m_statFile.StopTimeMeasurement();
@@ -1710,6 +1710,11 @@ mfxStatus CEncodingPipeline::Run()
                 sts = AllocateSufficientBuffer(&pCurrentTask->mfxBS);
                 MSDK_CHECK_STATUS(sts, "AllocateSufficientBuffer failed");
             }
+            else if (MFX_WRN_DEVICE_BUSY == sts)
+            {
+                sts = MFX_ERR_NONE; // using frame memory fifo. Processing complete signal.
+                break;
+            }
             else
             {
                 // get next surface and new task for 2nd bitstream in ViewOutput mode
@@ -1721,153 +1726,153 @@ mfxStatus CEncodingPipeline::Run()
         nFramesProcessed++;
     }
 
-    // means that the input file has ended, need to go to buffering loops
-    MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_DATA);
-    // exit in case of other errors
-    MSDK_CHECK_STATUS(sts, "m_pmfxENC->EncodeFrameAsync failed");
+	// means that the input file has ended, need to go to buffering loops
+	MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_DATA);
+	// exit in case of other errors
+	MSDK_CHECK_STATUS(sts, "m_pmfxENC->EncodeFrameAsync failed");
 
-    if (m_pmfxVPP)
-    {
-        // loop to get buffered frames from vpp
-        while (MFX_ERR_NONE <= sts || MFX_ERR_MORE_DATA == sts || MFX_ERR_MORE_SURFACE == sts)
-            // MFX_ERR_MORE_SURFACE can be returned only by RunFrameVPPAsync
-            // MFX_ERR_MORE_DATA is accepted only from EncodeFrameAsync
-        {
-            // find free surface for encoder input (vpp output)
-            nEncSurfIdx = GetFreeSurface(m_pEncSurfaces, m_EncResponse.NumFrameActual);
-            MSDK_CHECK_ERROR(nEncSurfIdx, MSDK_INVALID_SURF_IDX, MFX_ERR_MEMORY_ALLOC);
+	if (m_pmfxVPP)
+	{
+		// loop to get buffered frames from vpp
+		while (MFX_ERR_NONE <= sts || MFX_ERR_MORE_DATA == sts || MFX_ERR_MORE_SURFACE == sts)
+			// MFX_ERR_MORE_SURFACE can be returned only by RunFrameVPPAsync
+			// MFX_ERR_MORE_DATA is accepted only from EncodeFrameAsync
+		{
+			// find free surface for encoder input (vpp output)
+			nEncSurfIdx = GetFreeSurface(m_pEncSurfaces, m_EncResponse.NumFrameActual);
+			MSDK_CHECK_ERROR(nEncSurfIdx, MSDK_INVALID_SURF_IDX, MFX_ERR_MEMORY_ALLOC);
 
-            for (;;)
-            {
-                sts = m_pmfxVPP->RunFrameVPPAsync(NULL, &m_pEncSurfaces[nEncSurfIdx], NULL, &VppSyncPoint);
+			for (;;)
+			{
+				sts = m_pmfxVPP->RunFrameVPPAsync(NULL, &m_pEncSurfaces[nEncSurfIdx], NULL, &VppSyncPoint);
 
-                if (MFX_ERR_NONE < sts && !VppSyncPoint) // repeat the call if warning and no output
-                {
-                    if (MFX_WRN_DEVICE_BUSY == sts)
-                        MSDK_SLEEP(1); // wait if device is busy
-                }
-                else if (MFX_ERR_NONE < sts && VppSyncPoint)
-                {
-                    sts = MFX_ERR_NONE; // ignore warnings if output is available
-                    break;
-                }
-                else
-                    break; // not a warning
-            }
+				if (MFX_ERR_NONE < sts && !VppSyncPoint) // repeat the call if warning and no output
+				{
+					if (MFX_WRN_DEVICE_BUSY == sts)
+						MSDK_SLEEP(1); // wait if device is busy
+				}
+				else if (MFX_ERR_NONE < sts && VppSyncPoint)
+				{
+					sts = MFX_ERR_NONE; // ignore warnings if output is available
+					break;
+				}
+				else
+					break; // not a warning
+			}
 
-            if (MFX_ERR_MORE_SURFACE == sts)
-            {
-                continue;
-            }
-            else
-            {
-                MSDK_BREAK_ON_ERROR(sts);
-            }
+			if (MFX_ERR_MORE_SURFACE == sts)
+			{
+				continue;
+			}
+			else
+			{
+				MSDK_BREAK_ON_ERROR(sts);
+			}
 
-            // get a free task (bit stream and sync point for encoder)
-            sts = GetFreeTask(&pCurrentTask);
-            MSDK_BREAK_ON_ERROR(sts);
+			// get a free task (bit stream and sync point for encoder)
+			sts = GetFreeTask(&pCurrentTask);
+			MSDK_BREAK_ON_ERROR(sts);
 
-            // save the id of preceding vpp task which will produce input data for the encode task
-            if (VppSyncPoint)
-            {
-                pCurrentTask->DependentVppTasks.push_back(VppSyncPoint);
-                VppSyncPoint = NULL;
-            }
+			// save the id of preceding vpp task which will produce input data for the encode task
+			if (VppSyncPoint)
+			{
+				pCurrentTask->DependentVppTasks.push_back(VppSyncPoint);
+				VppSyncPoint = NULL;
+			}
 
-            for (;;)
-            {
-                InsertIDR(m_bInsertIDR);
-                sts = m_pmfxENC->EncodeFrameAsync(&m_encCtrl, &m_pEncSurfaces[nEncSurfIdx], &pCurrentTask->mfxBS, &pCurrentTask->EncSyncP);
-                m_bInsertIDR = false;
+			for (;;)
+			{
+				InsertIDR(m_bInsertIDR);
+				sts = m_pmfxENC->EncodeFrameAsync(&m_encCtrl, &m_pEncSurfaces[nEncSurfIdx], &pCurrentTask->mfxBS, &pCurrentTask->EncSyncP);
+				m_bInsertIDR = false;
 
-                if (MFX_ERR_NONE < sts && !pCurrentTask->EncSyncP) // repeat the call if warning and no output
-                {
-                    if (MFX_WRN_DEVICE_BUSY == sts)
-                        MSDK_SLEEP(1); // wait if device is busy
-                }
-                else if (MFX_ERR_NONE < sts && pCurrentTask->EncSyncP)
-                {
-                    sts = MFX_ERR_NONE; // ignore warnings if output is available
-                    break;
-                }
-                else if (MFX_ERR_NOT_ENOUGH_BUFFER == sts)
-                {
-                    sts = AllocateSufficientBuffer(&pCurrentTask->mfxBS);
-                    MSDK_CHECK_STATUS(sts, "AllocateSufficientBuffer failed");
-                }
-                else
-                {
-                    // get next surface and new task for 2nd bitstream in ViewOutput mode
-                    MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_BITSTREAM);
-                    break;
-                }
-            }
-        }
+				if (MFX_ERR_NONE < sts && !pCurrentTask->EncSyncP) // repeat the call if warning and no output
+				{
+					if (MFX_WRN_DEVICE_BUSY == sts)
+						MSDK_SLEEP(1); // wait if device is busy
+				}
+				else if (MFX_ERR_NONE < sts && pCurrentTask->EncSyncP)
+				{
+					sts = MFX_ERR_NONE; // ignore warnings if output is available
+					break;
+				}
+				else if (MFX_ERR_NOT_ENOUGH_BUFFER == sts)
+				{
+					sts = AllocateSufficientBuffer(&pCurrentTask->mfxBS);
+					MSDK_CHECK_STATUS(sts, "AllocateSufficientBuffer failed");
+				}
+				else
+				{
+					// get next surface and new task for 2nd bitstream in ViewOutput mode
+					MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_BITSTREAM);
+					break;
+				}
+			}
+		}
 
-        // MFX_ERR_MORE_DATA is the correct status to exit buffering loop with
-        // indicates that there are no more buffered frames
-        MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_DATA);
-        // exit in case of other errors
-        MSDK_CHECK_STATUS(sts, "m_pmfxENC->EncodeFrameAsync failed");
-    }
+		// MFX_ERR_MORE_DATA is the correct status to exit buffering loop with
+		// indicates that there are no more buffered frames
+		MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_DATA);
+		// exit in case of other errors
+		MSDK_CHECK_STATUS(sts, "m_pmfxENC->EncodeFrameAsync failed");
+	}
 
-    // loop to get buffered frames from encoder
-    while (MFX_ERR_NONE <= sts)
-    {
-        // get a free task (bit stream and sync point for encoder)
-        sts = GetFreeTask(&pCurrentTask);
-        MSDK_BREAK_ON_ERROR(sts);
+	// loop to get buffered frames from encoder
+	while (MFX_ERR_NONE <= sts)
+	{
+		// get a free task (bit stream and sync point for encoder)
+		sts = GetFreeTask(&pCurrentTask);
+		MSDK_BREAK_ON_ERROR(sts);
 
-        for (;;)
-        {
-            InsertIDR(m_bInsertIDR);
-            sts = m_pmfxENC->EncodeFrameAsync(&m_encCtrl, NULL, &pCurrentTask->mfxBS, &pCurrentTask->EncSyncP);
-            m_bInsertIDR = false;
+		for (;;)
+		{
+			InsertIDR(m_bInsertIDR);
+			sts = m_pmfxENC->EncodeFrameAsync(&m_encCtrl, NULL, &pCurrentTask->mfxBS, &pCurrentTask->EncSyncP);
+			m_bInsertIDR = false;
 
-            if (MFX_ERR_NONE < sts && !pCurrentTask->EncSyncP) // repeat the call if warning and no output
-            {
-                if (MFX_WRN_DEVICE_BUSY == sts)
-                    MSDK_SLEEP(1); // wait if device is busy
-            }
-            else if (MFX_ERR_NONE < sts && pCurrentTask->EncSyncP)
-            {
-                sts = MFX_ERR_NONE; // ignore warnings if output is available
-                break;
-            }
-            else if (MFX_ERR_NOT_ENOUGH_BUFFER == sts)
-            {
-                sts = AllocateSufficientBuffer(&pCurrentTask->mfxBS);
-                MSDK_CHECK_STATUS(sts, "AllocateSufficientBuffer failed");
-            }
-            else
-            {
-                // get new task for 2nd bitstream in ViewOutput mode
-                MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_BITSTREAM);
-                break;
-            }
-        }
-        MSDK_BREAK_ON_ERROR(sts);
-    }
+			if (MFX_ERR_NONE < sts && !pCurrentTask->EncSyncP) // repeat the call if warning and no output
+			{
+				if (MFX_WRN_DEVICE_BUSY == sts)
+					MSDK_SLEEP(1); // wait if device is busy
+			}
+			else if (MFX_ERR_NONE < sts && pCurrentTask->EncSyncP)
+			{
+				sts = MFX_ERR_NONE; // ignore warnings if output is available
+				break;
+			}
+			else if (MFX_ERR_NOT_ENOUGH_BUFFER == sts)
+			{
+				sts = AllocateSufficientBuffer(&pCurrentTask->mfxBS);
+				MSDK_CHECK_STATUS(sts, "AllocateSufficientBuffer failed");
+			}
+			else
+			{
+				// get new task for 2nd bitstream in ViewOutput mode
+				MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_BITSTREAM);
+				break;
+			}
+		}
+		MSDK_BREAK_ON_ERROR(sts);
+	}
 
-    // MFX_ERR_MORE_DATA is the correct status to exit buffering loop with
-    // indicates that there are no more buffered frames
-    MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_DATA);
-    // exit in case of other errors
-    MSDK_CHECK_STATUS(sts, "m_pmfxENC->EncodeFrameAsync failed");
+	// MFX_ERR_MORE_DATA is the correct status to exit buffering loop with
+	// indicates that there are no more buffered frames
+	MSDK_IGNORE_MFX_STS(sts, MFX_ERR_MORE_DATA);
+	// exit in case of other errors
+	MSDK_CHECK_STATUS(sts, "m_pmfxENC->EncodeFrameAsync failed");
 
-    // synchronize all tasks that are left in task pool
-    while (MFX_ERR_NONE == sts)
-    {
-        sts = m_TaskPool.SynchronizeFirstTask();
-    }
+	// synchronize all tasks that are left in task pool
+	while (MFX_ERR_NONE == sts)
+	{
+		sts = m_TaskPool.SynchronizeFirstTask();
+	}
 
-    // MFX_ERR_NOT_FOUND is the correct status to exit the loop with
-    // EncodeFrameAsync and SyncOperation don't return this status
-    MSDK_IGNORE_MFX_STS(sts, MFX_ERR_NOT_FOUND);
-    // report any errors that occurred in asynchronous part
-    MSDK_CHECK_STATUS(sts, "m_TaskPool.SynchronizeFirstTask failed");
-    m_statOverall.StopTimeMeasurement();
+	// MFX_ERR_NOT_FOUND is the correct status to exit the loop with
+	// EncodeFrameAsync and SyncOperation don't return this status
+	MSDK_IGNORE_MFX_STS(sts, MFX_ERR_NOT_FOUND);
+	// report any errors that occurred in asynchronous part
+	MSDK_CHECK_STATUS(sts, "m_TaskPool.SynchronizeFirstTask failed");
+	m_statOverall.StopTimeMeasurement();
     return sts;
 }
 
@@ -1924,7 +1929,7 @@ mfxStatus CEncodingPipeline::LoadNextFrame(mfxFrameSurface1* pSurf)
     }
 
     m_nFramesRead++;
-
+	
     return sts;
 }
 
@@ -1992,11 +1997,11 @@ void CEncodingPipeline::PrintInfo()
 
     const msdk_char* sMemType =
 #if defined(_WIN32) || defined(_WIN64)
-        m_memType == D3D9_MEMORY  ? MSDK_STRING("d3d")
+        m_memType == ENC_D3D9_MEMORY  ? MSDK_STRING("d3d")
 #else
         m_memType == D3D9_MEMORY  ? MSDK_STRING("vaapi")
 #endif
-        : (m_memType == D3D11_MEMORY ? MSDK_STRING("d3d11")
+        : (m_memType == ENC_D3D11_MEMORY ? MSDK_STRING("d3d11")
         : MSDK_STRING("system"));
     msdk_printf(MSDK_STRING("Memory type\t%s\n"), sMemType);
 

@@ -44,6 +44,11 @@ or https://software.intel.com/en-us/media-client-solutions-support.
 #include "avc_headers.h"
 #include "avc_nal_spl.h"
 
+#include <iostream>       // std::cout
+#include <queue>          // std::queue
+
+using namespace std;
+
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
@@ -101,6 +106,28 @@ bool IsDecodeCodecSupported(mfxU32 codecFormat);
 bool IsEncodeCodecSupported(mfxU32 codecFormat);
 bool IsPluginCodecSupported(mfxU32 codecFormat);
 
+struct MemFrame {
+	void *data;
+	mfxU32 length;
+};
+
+typedef MemFrame *PMemFrame;
+
+class CFrameFifo
+{
+	public:
+		CFrameFifo();
+		~CFrameFifo();
+		void Push(mfxFrameSurface1 *pSurface); 
+		bool Pop(mfxFrameSurface1 *pSurface); 
+	private:
+		HANDLE hMutex;
+		mfxU32 MaxFrames;
+		queue <PMemFrame> frameQueue;
+		void Lock() { WaitForSingleObject(hMutex, INFINITE); };
+		void UnLock() { ReleaseMutex(hMutex); };
+};
+
 class CSmplYUVReader
 {
 public :
@@ -109,17 +136,16 @@ public :
     virtual ~CSmplYUVReader();
 
     virtual void Close();
-    virtual mfxStatus Init(std::list<msdk_string> inputs, mfxU32 ColorFormat, bool shouldShiftP010=false);
+    virtual mfxStatus Init(std::list<msdk_string> inputs, mfxU32 ColorFormat, bool shouldShiftP010=false, CFrameFifo *pFrameFifo=NULL);
     virtual mfxStatus LoadNextFrame(mfxFrameSurface1* pSurface);
     virtual void Reset();
     mfxU32 m_ColorFormat; // color format of input YUV data, YUV420 or NV12
-
 protected:
-
     std::vector<FILE*> m_files;
 
     bool shouldShiftP010High;
     bool m_bInited;
+	CFrameFifo *pMemFrames;
 };
 
 class CSmplBitstreamWriter
@@ -149,12 +175,14 @@ public :
     virtual ~CSmplYUVWriter();
 
     virtual void      Close();
-    virtual mfxStatus Init(const msdk_char *strFileName, const mfxU32 numViews);
+    virtual mfxStatus Init(const msdk_char *strFileName, const mfxU32 numViews, CFrameFifo *pFrameFifo);
     virtual mfxStatus Reset();
     virtual mfxStatus WriteNextFrame(mfxFrameSurface1 *pSurface);
     virtual mfxStatus WriteNextFrameI420(mfxFrameSurface1 *pSurface);
 
     void SetMultiView() { m_bIsMultiView = true; }
+
+	CFrameFifo *pMemFrames;
 
 protected:
     FILE         *m_fDest, **m_fDestMVC;

@@ -21,8 +21,6 @@ or https://software.intel.com/en-us/media-client-solutions-support.
 
 #include <memory>
 #include "pipeline_encode.h"
-#include "pipeline_user.h"
-#include "pipeline_region_encode.h"
 #include <stdarg.h>
 #include <string>
 #include "version.h"
@@ -45,7 +43,7 @@ or https://software.intel.com/en-us/media-client-solutions-support.
 #define MOD_ENC_PARSE_INPUT
 #endif
 
-void PrintHelp(msdk_char *strAppName, const msdk_char *strErrorMessage, ...)
+static void PrintHelp(msdk_char *strAppName, const msdk_char *strErrorMessage, ...)
 {
     msdk_printf(MSDK_STRING("Encoding Sample Version %s\n\n"), GetMSDKSampleVersion().c_str());
 
@@ -159,7 +157,7 @@ void PrintHelp(msdk_char *strAppName, const msdk_char *strErrorMessage, ...)
     msdk_printf(MSDK_STRING("\n"));
 }
 
-mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* pParams)
+static mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, mfxU8 argPos, sEncInputParams* pParams)
 {
 
     if (1 == nArgNum)
@@ -184,7 +182,7 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
 #endif
 
     // parse command line parameters
-    for (mfxU8 i = 1; i < nArgNum; i++)
+    for (mfxU8 i = argPos; i < nArgNum; i++)
     {
         MSDK_CHECK_POINTER(strInput[i], MFX_ERR_NULL_PTR);
 
@@ -358,11 +356,11 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
 #if D3D_SURFACES_SUPPORT
         else if (0 == msdk_strcmp(strInput[i], MSDK_STRING("-d3d")))
         {
-            pParams->memType = D3D9_MEMORY;
+            pParams->memType = ENC_D3D9_MEMORY;
         }
         else if (0 == msdk_strcmp(strInput[i], MSDK_STRING("-d3d11")))
         {
-            pParams->memType = D3D11_MEMORY;
+            pParams->memType = ENC_D3D11_MEMORY;
         }
 #endif
 #ifdef LIBVA_SUPPORT
@@ -795,12 +793,13 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
 #endif
 
     // check if all mandatory parameters were set
-    if (!pParams->InputFiles.size() && !pParams->isV4L2InputEnabled)
+/*
+	if (!pParams->InputFiles.size() && !pParams->isV4L2InputEnabled)
     {
         PrintHelp(strInput[0], MSDK_STRING("Source file name not found"));
         return MFX_ERR_UNSUPPORTED;
     };
-
+*/
 
     if (0 == pParams->nWidth || 0 == pParams->nHeight)
     {
@@ -874,8 +873,7 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
         }
         else
         {
-            PrintHelp(strInput[0], MSDK_STRING("Only 2 views are supported right now in this sample."));
-            return MFX_ERR_UNSUPPORTED;
+            pParams->numViews = 2;
         }
     }
     else
@@ -1007,51 +1005,39 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, sInputParams* p
     return MFX_ERR_NONE;
 }
 
-CEncodingPipeline* CreatePipeline(const sInputParams& params)
+CEncodingPipeline* CreatePipeline(const sEncInputParams& params)
 {
 #ifdef MOD_ENC
     MOD_ENC_CREATE_PIPELINE;
 #endif
-    if(params.UseRegionEncode)
-    {
-        return new CRegionEncodingPipeline;
-    }
-    else if(params.nRotationAngle)
-    {
-        return new CUserPipeline;
-    }
-    else
-    {
-        return new CEncodingPipeline;
-    }
+    return new CEncodingPipeline;
 }
 
 
 #if defined(_WIN32) || defined(_WIN64)
-int _tmain(int argc, msdk_char *argv[])
+int SetupEncoder(int argc, msdk_char *argv[], int argPos, CEncodingPipeline*& pPipeline, CFrameFifo *pFrameFifo)
 #else
-int main(int argc, char *argv[])
+int SetupEncoder(int argc, char *argv[])
 #endif
 {
-    sInputParams Params = {};   // input parameters from command line
-    std::auto_ptr<CEncodingPipeline>  pPipeline;
+    sEncInputParams Params = {0};   // input parameters from command line
 
     mfxStatus sts = MFX_ERR_NONE; // return value check
 
-    sts = ParseInputString(argv, (mfxU8)argc, &Params);
+    sts = ParseInputString(argv, (mfxU8)argc, (mfxU8)argPos, &Params);
     MSDK_CHECK_PARSE_RESULT(sts, MFX_ERR_NONE, 1);
 
     // Choosing which pipeline to use
-    pPipeline.reset(CreatePipeline(Params));
+    pPipeline = CreatePipeline(Params);
 
-    MSDK_CHECK_POINTER(pPipeline.get(), MFX_ERR_MEMORY_ALLOC);
+    MSDK_CHECK_POINTER(pPipeline, MFX_ERR_MEMORY_ALLOC);
 
     if (MVC_ENABLED & Params.MVC_flags)
     {
         pPipeline->SetNumView(Params.numViews);
     }
 
-    sts = pPipeline->Init(&Params);
+    sts = pPipeline->Init(&Params, pFrameFifo);
     MSDK_CHECK_STATUS(sts, "pPipeline->Init failed");
 
     pPipeline->PrintInfo();
@@ -1063,7 +1049,7 @@ int main(int argc, char *argv[])
         msdk_printf(MSDK_STRING("V4l2 failure terminating the program\n"));
         return 0;
     }
-
+/*
     for (;;)
     {
         sts = pPipeline->Run();
@@ -1090,6 +1076,6 @@ int main(int argc, char *argv[])
     pPipeline->Close();
 
     msdk_printf(MSDK_STRING("\nProcessing finished\n"));
-
+*/
     return 0;
 }

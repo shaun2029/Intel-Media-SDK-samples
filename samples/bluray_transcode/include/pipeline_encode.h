@@ -56,13 +56,13 @@ enum {
     MVC_VIEWOUTPUT        = 0x2,    // 2 output bitstreams
 };
 
-enum MemType {
-    SYSTEM_MEMORY = 0x00,
-    D3D9_MEMORY   = 0x01,
-    D3D11_MEMORY  = 0x02,
+enum EncMemType {
+    ENC_SYSTEM_MEMORY = 0x00,
+    ENC_D3D9_MEMORY   = 0x01,
+    ENC_D3D11_MEMORY  = 0x02,
 };
 
-struct sInputParams
+struct sEncInputParams
 {
     mfxU16 nTargetUsage;
     mfxU32 CodecId;
@@ -88,7 +88,7 @@ struct sInputParams
     mfxU16 nDstWidth; // destination picture width, specified if resizing required
     mfxU16 nDstHeight; // destination picture height, specified if resizing required
 
-    MemType memType;
+    EncMemType memType;
     bool bUseHWLib; // true if application wants to use HW MSDK library
 
     std::list<msdk_string> InputFiles;
@@ -152,14 +152,14 @@ struct sInputParams
 
 };
 
-struct sTask
+struct sEncTask
 {
     mfxBitstream mfxBS;
     mfxSyncPoint EncSyncP;
     std::list<mfxSyncPoint> DependentVppTasks;
     CSmplBitstreamWriter *pWriter;
 
-    sTask();
+    sEncTask();
     mfxStatus WriteBitstream();
     mfxStatus Reset();
     mfxStatus Init(mfxU32 nBufferSize, CSmplBitstreamWriter *pWriter = NULL);
@@ -173,14 +173,14 @@ public:
     virtual ~CEncTaskPool();
 
     virtual mfxStatus Init(MFXVideoSession* pmfxSession, CSmplBitstreamWriter* pWriter, mfxU32 nPoolSize, mfxU32 nBufferSize, CSmplBitstreamWriter *pOtherWriter = NULL);
-    virtual mfxStatus GetFreeTask(sTask **ppTask);
+    virtual mfxStatus GetFreeTask(sEncTask **ppTask);
     virtual mfxStatus SynchronizeFirstTask();
 
     virtual CTimeStatistics& GetOverallStatistics() { return m_statOverall;}
     virtual CTimeStatistics& GetFileStatistics() { return m_statFile;}
     virtual void Close();
 protected:
-    sTask* m_pTasks;
+    sEncTask* m_pTasks;
     mfxU32 m_nPoolSize;
     mfxU32 m_nTaskBufferStart;
 
@@ -198,16 +198,16 @@ public:
     CEncodingPipeline();
     virtual ~CEncodingPipeline();
 
-    virtual mfxStatus Init(sInputParams *pParams);
+    virtual mfxStatus Init(sEncInputParams *pParams, CFrameFifo *pFrameFifo);
     virtual mfxStatus Run();
     virtual void Close();
-    virtual mfxStatus ResetMFXComponents(sInputParams* pParams);
+    virtual mfxStatus ResetMFXComponents(sEncInputParams* pParams);
     virtual mfxStatus ResetDevice();
 
     void SetNumView(mfxU32 numViews) { m_nNumView = numViews; }
     virtual void  PrintInfo();
 
-    void InitV4L2Pipeline(sInputParams *pParams);
+    void InitV4L2Pipeline(sEncInputParams *pParams);
     mfxStatus CaptureStartV4L2Pipeline();
     void CaptureStopV4L2Pipeline();
 
@@ -239,7 +239,7 @@ protected:
 
     MFXFrameAllocator* m_pMFXAllocator;
     mfxAllocatorParams* m_pmfxAllocatorParams;
-    MemType m_memType;
+    EncMemType m_memType;
     mfxU16 m_nMemBuffer;
     bool m_bExternalAlloc; // use memory allocator as external for Media SDK
 
@@ -285,10 +285,10 @@ protected:
 
     CTimeStatisticsReal m_statOverall;
     CTimeStatisticsReal m_statFile;
-    virtual mfxStatus InitMfxEncParams(sInputParams *pParams);
-    virtual mfxStatus InitMfxVppParams(sInputParams *pParams);
+    virtual mfxStatus InitMfxEncParams(sEncInputParams *pParams);
+    virtual mfxStatus InitMfxVppParams(sEncInputParams *pParams);
 
-    virtual mfxStatus InitFileWriters(sInputParams *pParams);
+    virtual mfxStatus InitFileWriters(sEncInputParams *pParams);
     virtual void FreeFileWriters();
     virtual mfxStatus InitFileWriter(CSmplBitstreamWriter **ppWriter, const msdk_char *filename);
 
@@ -311,7 +311,7 @@ protected:
     virtual mfxStatus FillBuffers();
     virtual mfxStatus LoadNextFrame(mfxFrameSurface1* pSurf);
 
-    virtual mfxStatus GetFreeTask(sTask **ppTask);
+    virtual mfxStatus GetFreeTask(sEncTask **ppTask);
     virtual MFXVideoSession& GetFirstSession(){return m_mfxSession;}
     virtual MFXVideoENCODE* GetFirstEncoder(){return m_pmfxENC;}
 

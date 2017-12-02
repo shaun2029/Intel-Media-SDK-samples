@@ -60,7 +60,7 @@ public:
     mfxStatus CreateEncoders();
     mfxStatus CreatePlugins(mfxPluginUID pluginGUID, mfxChar* pluginPath);
 
-    mfxStatus GetFreeTask(int resourceNum, sTask **ppTask);
+    mfxStatus GetFreeTask(int resourceNum, sEncTask **ppTask);
     void CloseAndDeleteEverything();
 
 protected:
@@ -81,10 +81,10 @@ public:
     CRegionEncodingPipeline();
     virtual ~CRegionEncodingPipeline();
 
-    virtual mfxStatus Init(sInputParams *pParams);
+    virtual mfxStatus Init(sEncInputParams *pParams);
     virtual mfxStatus Run();
     virtual void Close();
-    virtual mfxStatus ResetMFXComponents(sInputParams* pParams);
+    virtual mfxStatus ResetMFXComponents(sEncInputParams* pParams);
 
     void SetMultiView();
     void SetNumView(mfxU32 numViews) { m_nNumView = numViews; }
@@ -95,7 +95,7 @@ protected:
 
     mfxExtHEVCRegion m_HEVCRegion;
 
-    virtual mfxStatus InitMfxEncParams(sInputParams *pParams);
+    virtual mfxStatus InitMfxEncParams(sEncInputParams *pParams);
 
     virtual mfxStatus CreateAllocator();
 
