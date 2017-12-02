@@ -706,7 +706,7 @@ mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, int *nArgPos, s
 
     if (pParams->nAsyncDepth == 0)
     {
-        pParams->nAsyncDepth = 4; //set by default;
+        pParams->nAsyncDepth = 8; //set by default;
     }
 
     return MFX_ERR_NONE;

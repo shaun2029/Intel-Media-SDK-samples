@@ -862,7 +862,7 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 	bool res = false;
 	int size;
-	int timeout = 100000;
+	int timeout = 1000;
 	PMemFrame pFrame = NULL;
 
 	mfxU32 i;
