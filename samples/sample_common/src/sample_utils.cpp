@@ -825,43 +825,44 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
     mfxFrameInfo &pInfo = pSurface->Info;
     mfxFrameData &pData = pSurface->Data;
 
-	while (1) {
-		Lock();
-		size = frameQueue.size();
-		UnLock();
-		if (size < MaxFrames) {
-			void *pMem = malloc(pInfo.BufferSize);
-			mfxU8 *pMemData = (mfxU8*)pMem;
-			if (pMem) {
-				for (i = 0; i < pInfo.CropH; i++)
-				{
-					memcpy(pMemData, pData.Y + (pInfo.CropY * pData.Pitch + pInfo.CropX)+ i * pData.Pitch, (size_t)pInfo.CropW);
-					pMemData += pInfo.CropW;
-				}
+	void *pMem = malloc(pInfo.BufferSize);
+	mfxU8 *pMemData = (mfxU8*)pMem;
+	if (pMem) {
+		for (i = 0; i < pInfo.CropH; i++)
+		{
+			memcpy(pMemData, pData.Y + (pInfo.CropY * pData.Pitch + pInfo.CropX)+ i * pData.Pitch, (size_t)pInfo.CropW);
+			pMemData += pInfo.CropW;
+		}
 
-				for (i = 0; i < (mfxU32) pInfo.CropH/2; i++)
-				{
-					memcpy(pMemData, pData.UV + (pInfo.CropY * pData.Pitch / 2 + pInfo.CropX / 2) + i * pData.Pitch, (size_t)pInfo.CropW);
-					pMemData += pInfo.CropW;
-				}
+		for (i = 0; i < (mfxU32) pInfo.CropH/2; i++)
+		{
+			memcpy(pMemData, pData.UV + (pInfo.CropY * pData.Pitch / 2 + pInfo.CropX / 2) + i * pData.Pitch, (size_t)pInfo.CropW);
+			pMemData += pInfo.CropW;
+		}
 
-				PMemFrame pFrame = (PMemFrame)malloc(sizeof(MemFrame));
-				pFrame->data = pMem;
-				pFrame->length = pInfo.BufferSize;
+		PMemFrame pFrame = (PMemFrame)malloc(sizeof(MemFrame));
+		pFrame->data = pMem;
+		pFrame->length = pInfo.BufferSize;
+
+		while (1) {
+			Lock();
+			size = frameQueue.size();
+			UnLock();
+			if (size < MaxFrames) {
 				Lock();
 				frameQueue.push(pFrame);
 				UnLock();
+				break;
 			}
-			break;
+			MSDK_SLEEP(1);
 		}
-		MSDK_SLEEP(1);
 	}
 }
 
 bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 	bool res = false;
 	int size;
-	int timeout = 1000;
+	int timeout = 100000;
 	PMemFrame pFrame = NULL;
 
 	mfxU32 i;
