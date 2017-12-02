@@ -1033,7 +1033,7 @@ int SetupEncoder(int argc, char *argv[])
 	Params.nQVBRQuality = 18;
 	Params.nGopPicSize = 24;
 	Params.nGopRefDist = 3;
-	Params.nAsyncDepth = 4;
+	Params.nAsyncDepth = 8;
 	Params.nNumRefFrame = 2;
 	Params.nTargetUsage = 1;
 	Params.nNumSlice = 1;

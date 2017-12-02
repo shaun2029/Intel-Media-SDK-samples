@@ -27,108 +27,95 @@ or https://software.intel.com/en-us/media-client-solutions-support.
 
 void PrintHelp(msdk_char *strAppName, const msdk_char *strErrorMessage)
 {
-    msdk_printf(MSDK_STRING("Decoding Sample Version %s\n\n"), GetMSDKSampleVersion().c_str());
+    msdk_printf(MSDK_STRING("Bluray  Trasncode Version 1.0.0\n"));
+    msdk_printf(MSDK_STRING("        Based on Intel Media SDK samples.  %s\n\n"), GetMSDKSampleVersion().c_str());
+    msdk_printf(MSDK_STRING("        This aplication is free and open where possible.\n\n"));
+
+    msdk_printf(MSDK_STRING("        NOTE: This application works best with 4th generation Intel® Core processor(codename Haswell) onward.\n\n"));
 
     if (strErrorMessage)
     {
         msdk_printf(MSDK_STRING("Error: %s\n"), strErrorMessage);
     }
 
-    msdk_printf(MSDK_STRING("Usage: %s <codecid> [<options>] -i InputBitstream\n"), strAppName);
-    msdk_printf(MSDK_STRING("   or: %s <codecid> [<options>] -i InputBitstream -r\n"), strAppName);
-    msdk_printf(MSDK_STRING("   or: %s <codecid> [<options>] -i InputBitstream -o OutputYUVFile\n"), strAppName);
+    msdk_printf(MSDK_STRING("Usage: %s <codecid> [<decode options>] -i InputBitstream <codecid> [<encode options>] -o OutputBitstream \n"), strAppName);
     msdk_printf(MSDK_STRING("\n"));
     msdk_printf(MSDK_STRING("Supported codecs (<codecid>):\n"));
-    msdk_printf(MSDK_STRING("   <codecid>=h264|mpeg2|vc1|mvc|jpeg - built-in Media SDK codecs\n"));
-    msdk_printf(MSDK_STRING("   <codecid>=h265|vp9|capture            - in-box Media SDK plugins (may require separate downloading and installation)\n"));
+    msdk_printf(MSDK_STRING("   <codecid>=h264|mpeg2|vc1|mvc - built-in Media SDK codecs\n"));
     msdk_printf(MSDK_STRING("\n"));
-    msdk_printf(MSDK_STRING("Work models:\n"));
-    msdk_printf(MSDK_STRING("  1. Performance model: decoding on MAX speed, no rendering, no YUV dumping (no -r or -o option)\n"));
-    msdk_printf(MSDK_STRING("  2. Rendering model: decoding with rendering on the screen (-r option)\n"));
-    msdk_printf(MSDK_STRING("  3. Dump model: decoding with YUV dumping (-o option)\n"));
-    msdk_printf(MSDK_STRING("\n"));
-    msdk_printf(MSDK_STRING("Options:\n"));
+    msdk_printf(MSDK_STRING("Decode & Encode Options:\n"));
     msdk_printf(MSDK_STRING("   [-hw]                     - use platform specific SDK implementation (default)\n"));
     msdk_printf(MSDK_STRING("   [-sw]                     - use software implementation, if not specified platform specific SDK implementation is used\n"));
-    msdk_printf(MSDK_STRING("   [-p guid]                 - 32-character hexadecimal guid string\n"));
-    msdk_printf(MSDK_STRING("   [-path path]              - path to plugin (valid only in pair with -p option)\n"));
-    msdk_printf(MSDK_STRING("                               (optional for Media SDK in-box plugins, required for user-decoder ones)\n"));
     msdk_printf(MSDK_STRING("   [-f]                      - rendering framerate\n"));
-    msdk_printf(MSDK_STRING("   [-w]                      - output width\n"));
-    msdk_printf(MSDK_STRING("   [-h]                      - output height\n"));
-    msdk_printf(MSDK_STRING("   [-di bob/adi]             - enable deinterlacing BOB/ADI\n"));
-    msdk_printf(MSDK_STRING("\n"));
-    msdk_printf(MSDK_STRING("JPEG Chroma Type:\n"));
-    msdk_printf(MSDK_STRING("   [-jpeg_rgb] - RGB Chroma Type\n"));
-    msdk_printf(MSDK_STRING("Output format parameters:\n"));
-    msdk_printf(MSDK_STRING("   [-i420] - pipeline output format: NV12, output file format: I420\n"));
-    msdk_printf(MSDK_STRING("   [-nv12] - pipeline output format: NV12, output file format: NV12\n"));
-    msdk_printf(MSDK_STRING("   [-rgb4] - pipeline output format: RGB4, output file format: RGB4\n"));
-    msdk_printf(MSDK_STRING("   [-rgb4_fcr] - pipeline output format: RGB4 in full color range, output file format: RGB4 in full color range\n"));
-    msdk_printf(MSDK_STRING("   [-p010] - pipeline output format: P010, output file format: P010\n"));
-    msdk_printf(MSDK_STRING("   [-a2rgb10] - pipeline output format: A2RGB10, output file format: A2RGB10\n"));
-    msdk_printf(MSDK_STRING("\n"));
+    msdk_printf(MSDK_STRING("   [-async]                 - depth of asynchronous pipeline. default value is 8. must be between 1 and 20.\n"));
 #if D3D_SURFACES_SUPPORT
     msdk_printf(MSDK_STRING("   [-d3d]                    - work with d3d9 surfaces\n"));
     msdk_printf(MSDK_STRING("   [-d3d11]                  - work with d3d11 surfaces\n"));
-    msdk_printf(MSDK_STRING("   [-r]                      - render decoded data in a separate window \n"));
-    msdk_printf(MSDK_STRING("   [-wall w h n m t tmo]     - same as -r, and positioned rendering window in a particular cell on specific monitor \n"));
-    msdk_printf(MSDK_STRING("       w                     - number of columns of video windows on selected monitor\n"));
-    msdk_printf(MSDK_STRING("       h                     - number of rows of video windows on selected monitor\n"));
-    msdk_printf(MSDK_STRING("       n(0,.,w*h-1)          - order of video window in table that will be rendered\n"));
-    msdk_printf(MSDK_STRING("       m(0,1..)              - monitor id \n"));
-    msdk_printf(MSDK_STRING("       t(0/1)                - enable/disable window's title\n"));
-    msdk_printf(MSDK_STRING("       tmo                   - timeout for -wall option\n"));
-    msdk_printf(MSDK_STRING("Screen capture parameters:\n"));
-    msdk_printf(MSDK_STRING("   [-scr:w]                  - screen resolution width\n"));
-    msdk_printf(MSDK_STRING("   [-scr:h]                  - screen resolution height\n"));
     msdk_printf(MSDK_STRING("\n"));
 
 #endif
-#if defined(LIBVA_SUPPORT)
-    msdk_printf(MSDK_STRING("   [-vaapi]                  - work with vaapi surfaces\n"));
-#endif
-#if defined(LIBVA_X11_SUPPORT)
-    msdk_printf(MSDK_STRING("   [-r]                      - render decoded data in a separate X11 window \n"));
-#endif
-#if defined(LIBVA_WAYLAND_SUPPORT)
-    msdk_printf(MSDK_STRING("   [-rwld]                   - render decoded data in a Wayland window \n"));
-    msdk_printf(MSDK_STRING("   [-perf]                   - turn on asynchronous flipping for Wayland rendering \n"));
-#endif
-#if defined(LIBVA_DRM_SUPPORT)
-    msdk_printf(MSDK_STRING("   [-rdrm]                   - render decoded data in a thru DRM frame buffer\n"));
-    msdk_printf(MSDK_STRING("   [-window x y w h]         - set render window position and size\n"));
-#endif
-    msdk_printf(MSDK_STRING("   [-low_latency]            - configures decoder for low latency mode (supported only for H.264 and JPEG codec)\n"));
-    msdk_printf(MSDK_STRING("   [-calc_latency]           - calculates latency during decoding and prints log (supported only for H.264 and JPEG codec)\n"));
-    msdk_printf(MSDK_STRING("   [-async]                  - depth of asynchronous pipeline. default value is 4. must be between 1 and 20\n"));
+    msdk_printf(MSDK_STRING("   [-async]                  - depth of asynchronous pipeline. default value is 8. must be between 1 and 20\n"));
     msdk_printf(MSDK_STRING("   [-gpucopy::<on,off>] Enable or disable GPU copy mode\n"));
-    msdk_printf(MSDK_STRING("   [-timeout]                - timeout in seconds\n"));
-#if _MSDK_API >= MSDK_API(1,22)
-    msdk_printf(MSDK_STRING("   [-dec_postproc force/auto] - resize after decoder using direct pipe\n"));
-    msdk_printf(MSDK_STRING("                  force: instruct to use decoder-based post processing\n"));
-    msdk_printf(MSDK_STRING("                         or fail if the decoded stream is unsupported\n"));
-    msdk_printf(MSDK_STRING("                  auto: instruct to use decoder-based post processing for supported streams \n"));
-    msdk_printf(MSDK_STRING("                        or perform VPP operation through separate pipeline component for unsupported streams\n"));
-
-#endif //_MSDK_API >= MSDK_API(1,22)
-#if !defined(_WIN32) && !defined(_WIN64)
-    msdk_printf(MSDK_STRING("   [-threads_num]            - number of mediasdk task threads\n"));
-    msdk_printf(MSDK_STRING("   [-threads_schedtype]      - scheduling type of mediasdk task threads\n"));
-    msdk_printf(MSDK_STRING("   [-threads_priority]       - priority of mediasdk task threads\n"));
+	msdk_printf(MSDK_STRING("   [-timeout]                - timeout in seconds\n"));
     msdk_printf(MSDK_STRING("\n"));
-    msdk_thread_printf_scheduling_help();
-#endif
-#if defined(_WIN32) || defined(_WIN64)
-    msdk_printf(MSDK_STRING("   [-jpeg_rotate n]          - rotate jpeg frame n degrees \n"));
-    msdk_printf(MSDK_STRING("       n(90,180,270)         - number of degrees \n"));
-
-    msdk_printf(MSDK_STRING("\nFeatures: \n"));
-    msdk_printf(MSDK_STRING("   Press 1 to toggle fullscreen rendering on/off\n"));
-#endif
     msdk_printf(MSDK_STRING("\n"));
-    msdk_printf(MSDK_STRING("Example:\n"));
-    msdk_printf(MSDK_STRING("  %s h265 -i in.bit -o out.yuv -p 15dd936825ad475ea34e35f3f54217a6\n"), strAppName);
+    
+	msdk_printf(MSDK_STRING("Decode Options:\n"));
+	msdk_printf(MSDK_STRING("   [-di bob/adi]             - enable deinterlacing BOB/ADI\n"));
+    msdk_printf(MSDK_STRING("   [-w]                      - output width\n"));
+    msdk_printf(MSDK_STRING("   [-h]                      - output height\n"));
+	msdk_printf(MSDK_STRING("\n"));
+    msdk_printf(MSDK_STRING("\n"));
+
+	msdk_printf(MSDK_STRING("Encode Options:\n"));
+    msdk_printf(MSDK_STRING("   [-tff|bff] - input stream is interlaced, top|bottom fielf first, if not specified progressive is expected\n"));
+    msdk_printf(MSDK_STRING("   [-bref] - arrange B frames in B pyramid reference structure\n"));
+    msdk_printf(MSDK_STRING("   [-nobref] -  do not use B-pyramid (by default the decision is made by library). enabled by default.\n"));
+    msdk_printf(MSDK_STRING("   [-idr_interval size] - idr interval, default 0 means every I is an IDR, 1 means every other I frame is an IDR etc\n"));
+    msdk_printf(MSDK_STRING("   [-n number] - number of frames to process\n"));
+    msdk_printf(MSDK_STRING("   [-b bitRate] - encoded bit rate (Kbits per second), valid for H.264, H.265, MPEG2 and MVC encoders \n"));
+    msdk_printf(MSDK_STRING("   [-u speed|quality|balanced] - target usage, valid for H.264, H.265, MPEG2 and MVC encoders.\n"));
+    msdk_printf(MSDK_STRING("   [-r distance] - Distance between I- or P- key frames (1 means no B-frames) \n"));
+    msdk_printf(MSDK_STRING("   [-g size] - GOP size (default 256)\n"));
+    msdk_printf(MSDK_STRING("   [-x numRefs]   - number of reference frames\n"));
+    msdk_printf(MSDK_STRING("   [-la] - use the look ahead bitrate control algorithm (LA BRC) (by default constant bitrate control method is used)\n"));
+    msdk_printf(MSDK_STRING("           for H.264, H.265 encoder. Supported only with -hw option on 4th Generation Intel Core processors. \n"));
+    msdk_printf(MSDK_STRING("   [-lad depth] - depth parameter for the LA BRC, the number of frames to be analyzed before encoding. In range [10,100].\n"));
+    msdk_printf(MSDK_STRING("            may be 1 in the case when -mss option is specified \n"));
+    msdk_printf(MSDK_STRING("   [-dstw width] - destination picture width, invokes VPP resizing\n"));
+    msdk_printf(MSDK_STRING("   [-dsth height] - destination picture height, invokes VPP resizing\n"));
+    msdk_printf(MSDK_STRING("   [-gpucopy::<on,off>] Enable or disable GPU copy mode\n"));
+    msdk_printf(MSDK_STRING("   [-qvbr quality]          - quality controlled variable bitrate control, quality in range [11,51] where 11 is the highest quality.\n"));
+    msdk_printf(MSDK_STRING("                              Bit rate (-b) and max bit rate (-MaxKbps) are used by qvbr bitrate control.\n"));
+    msdk_printf(MSDK_STRING("                              This algorithm tries to achieve the subjective quality with minimum no. of bits while trying to keep\n"));
+    msdk_printf(MSDK_STRING("                              the bitrate constant and HRD compliance is being followed. QVBR is supported from 4th generation\n"));
+    msdk_printf(MSDK_STRING("                              Intel® Core processor(codename Haswell) onward.\n"));
+    msdk_printf(MSDK_STRING("   [-vbr]                   - variable bitrate control\n"));
+    msdk_printf(MSDK_STRING("   [-cqp]                   - constant quantization parameter (CQP BRC) bitrate control method\n"));
+    msdk_printf(MSDK_STRING("                              (by default constant bitrate control method is used), should be used along with -qpi, -qpp, -qpb.\n"));
+    msdk_printf(MSDK_STRING("   [-qpi]                   - constant quantizer for I frames (if bitrace control method is CQP). In range [1,51]. 0 by default, i.e.no limitations on QP.\n"));
+    msdk_printf(MSDK_STRING("   [-qpp]                   - constant quantizer for P frames (if bitrace control method is CQP). In range [1,51]. 0 by default, i.e.no limitations on QP.\n"));
+    msdk_printf(MSDK_STRING("   [-qpb]                   - constant quantizer for B frames (if bitrace control method is CQP). In range [1,51]. 0 by default, i.e.no limitations on QP.\n"));
+    msdk_printf(MSDK_STRING("   [-qsv-ff]       Enable QSV-FF mode\n"));
+    msdk_printf(MSDK_STRING("   [-gpb:<on,off>]          - Turn this option OFF to make HEVC encoder use regular P-frames instead of GPB\n"));
+    msdk_printf(MSDK_STRING("   [-num_slice]             - number of slices in each video frame. 1 by default.\n"));
+    msdk_printf(MSDK_STRING("                              If num_slice equals zero, the encoder may choose any slice partitioning allowed by the codec standard.\n"));
+    msdk_printf(MSDK_STRING("   [-mss]                   - maximum slice size in bytes. Supported only with -hw and h264 codec. This option is not compatible with -num_slice option.\n"));
+    msdk_printf(MSDK_STRING("   [-mfs]                   - maximum frame size in bytes. Supported only with h264 and hevc codec for VBR mode.\n"));
+    msdk_printf(MSDK_STRING("   [-CodecProfile]          - specifies codec profile. HIGH by default.\n"));
+    msdk_printf(MSDK_STRING("   [-CodecLevel]            - specifies codec level. 4.1 by default.\n"));
+    msdk_printf(MSDK_STRING("   [-GopOptFlag:closed]     - closed gop. open gop by default\n"));
+    msdk_printf(MSDK_STRING("   [-GopOptFlag:strict]     - strict gop\n"));
+    msdk_printf(MSDK_STRING("   [-InitialDelayInKB]      - the decoder starts decoding after the buffer reaches the initial size InitialDelayInKB, \
+                            which is equivalent to reaching an initial delay of InitialDelayInKB*8000/TargetKbps ms\n"));
+    msdk_printf(MSDK_STRING("   [-BufferSizeInKB ]       - represents the maximum possible size of any compressed frames\n"));
+    msdk_printf(MSDK_STRING("   [-MaxKbps ]              - for variable bitrate control, specifies the maximum bitrate at which \
+                            the encoded data enters the Video Buffering Verifier buffer\n"));
+
+    msdk_printf(MSDK_STRING("   [-timeout]               - encoding in cycle not less than specific time in seconds\n"));
+    msdk_printf(MSDK_STRING("\n"));
+	msdk_printf(MSDK_STRING("Example:\n"));
+    msdk_printf(MSDK_STRING("  %s mvc -i in.264 mvc -o out.264\n"), strAppName);
 }
 
 mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, int *nArgPos, sInputParams* pParams)
