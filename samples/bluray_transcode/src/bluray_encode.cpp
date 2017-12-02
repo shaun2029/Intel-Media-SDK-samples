@@ -1030,7 +1030,7 @@ int SetupEncoder(int argc, char *argv[])
 	Params.bUseHWLib = true;
 	Params.MaxKbps = 0;
 	Params.nBitRate = 0;
-	Params.nQVBRQuality = 19;
+	Params.nQVBRQuality = 18;
 	Params.nGopPicSize = 24;
 	Params.nGopRefDist = 3;
 	Params.nAsyncDepth = 4;

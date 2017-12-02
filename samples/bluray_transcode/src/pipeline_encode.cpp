@@ -1995,8 +1995,7 @@ void CEncodingPipeline::PrintInfo()
     msdk_printf(MSDK_STRING("Ref number\t%d\n"), m_mfxEncParams.mfx.NumRefFrame);
     msdk_printf(MSDK_STRING("Idr Interval\t%d\n"), m_mfxEncParams.mfx.IdrInterval);
     msdk_printf(MSDK_STRING("Target usage\t%s\n"), TargetUsageToStr(m_mfxEncParams.mfx.TargetUsage));
-
-
+	msdk_printf(MSDK_STRING("Number of Slices\t%d\n"), m_mfxEncParams.mfx.NumSlice);
 
     const msdk_char* sMemType =
 #if defined(_WIN32) || defined(_WIN64)
