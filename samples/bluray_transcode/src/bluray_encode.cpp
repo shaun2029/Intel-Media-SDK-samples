@@ -170,7 +170,6 @@ static mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, mfxU8 ar
     msdk_opt_read(MSDK_CPU_ROTATE_PLUGIN, pParams->strPluginDLLPath);
 
     // default implementation
-    pParams->bUseHWLib = true;
     pParams->isV4L2InputEnabled = false;
     pParams->nNumFrames = 0;
     pParams->FileInputFourCC = MFX_FOURCC_I420;
@@ -902,13 +901,6 @@ static mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, mfxU8 ar
         pParams->nDstHeight = pParams->nHeight;
     }
 
-    // calculate default bitrate based on the resolution (a parameter for encoder, so Dst resolution is used)
-    if (pParams->nBitRate == 0)
-    {
-        pParams->nBitRate = CalculateDefaultBitrate(pParams->CodecId, pParams->nTargetUsage, pParams->nDstWidth,
-            pParams->nDstHeight, pParams->dFrameRate);
-    }
-
     if (!pParams->nPicStruct)
     {
         pParams->nPicStruct = MFX_PICSTRUCT_PROGRESSIVE;
@@ -976,7 +968,13 @@ static mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, mfxU8 ar
         pParams->nAsyncDepth = 1;
     }
 
-    if (pParams->nRateControlMethod == 0)
+	if ((pParams->nRateControlMethod == 0) && (pParams->bUseHWLib))
+    {
+        pParams->nRateControlMethod = MFX_RATECONTROL_QVBR;
+    }
+
+	
+	if (pParams->nRateControlMethod == 0)
     {
         pParams->nRateControlMethod = MFX_RATECONTROL_CBR;
     }
@@ -1027,8 +1025,39 @@ int SetupEncoder(int argc, char *argv[])
 	Params.dFrameRate = CalculateFrameRate(pFrameInfo->FrameRateExtN, pFrameInfo->FrameRateExtD);
 	Params.nWidth = pFrameInfo->Width;
 	Params.nHeight = pFrameInfo->Height;
-	
+	Params.CodecLevel = 41;
+	Params.nBRefType = MFX_B_REF_OFF;
+	Params.bUseHWLib = true;
+	Params.MaxKbps = 0;
+	Params.nBitRate = 0;
+	Params.nQVBRQuality = 19;
+	Params.nGopPicSize = 24;
+	Params.nGopRefDist = 3;
+	Params.nAsyncDepth = 4;
+	Params.nNumRefFrame = 2;
+	Params.nTargetUsage = 1;
+	Params.nNumSlice = 1;
+
 	sts = ParseInputString(argv, (mfxU8)argc, (mfxU8)argPos, &Params);
+
+    // calculate default bitrate based on the resolution (a parameter for encoder, so Dst resolution is used)
+    if (!Params.nBitRate)
+    {
+		Params.nBitRate = 8000;
+		if (Params.numViews > 1) {
+			Params.nBitRate *= 2;
+		}
+    }
+
+	if (!Params.MaxKbps)
+	{
+		Params.MaxKbps = Params.nBitRate * 2;
+	}
+
+	if (Params.MaxKbps > 42000) {
+		Params.MaxKbps = 42000;
+	}
+
     MSDK_CHECK_PARSE_RESULT(sts, MFX_ERR_NONE, 1);
 
     // Choosing which pipeline to use

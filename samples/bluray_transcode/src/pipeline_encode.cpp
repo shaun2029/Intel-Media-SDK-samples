@@ -1955,17 +1955,20 @@ void CEncodingPipeline::PrintInfo()
     {
 		msdk_printf(MSDK_STRING("Bit rate control\tQVBR\n"));
 		msdk_printf(MSDK_STRING("Qvbr Quality\t%d\n"), m_CodingOption3.QVBRQuality);
-		msdk_printf(MSDK_STRING("Bit rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.TargetKbps);
+		msdk_printf(MSDK_STRING("Bit rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.TargetKbps, m_mfxEncParams.mfx.MaxKbps);
+		msdk_printf(MSDK_STRING("Max rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.MaxKbps);
     }
     else if (m_mfxEncParams.mfx.RateControlMethod != MFX_RATECONTROL_CQP)
     {
 		msdk_printf(MSDK_STRING("Bit rate control\tVBR\n"));
 		msdk_printf(MSDK_STRING("Bit rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.TargetKbps);
+		msdk_printf(MSDK_STRING("Max rate(Kbps)\t%d\n"), m_mfxEncParams.mfx.MaxKbps);
     }
     else
     {
 		msdk_printf(MSDK_STRING("Bit rate control\tCQP\n"));
-        msdk_printf(MSDK_STRING("QPI\t%d\nQPP\t%d\nQPB\t%d\n"), m_mfxEncParams.mfx.QPI, m_mfxEncParams.mfx.QPP, m_mfxEncParams.mfx.QPB);
+		msdk_printf(MSDK_STRING("Quality\tQPI %d\tQPP %d\tQPB %d\n"), m_mfxEncParams.mfx.QPI, 
+			m_mfxEncParams.mfx.QPP, m_mfxEncParams.mfx.QPB);
     }
 
 	if (m_mfxEncParams.mfx.CodecProfile == MFX_PROFILE_AVC_STEREO_HIGH)

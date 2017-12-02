@@ -1587,15 +1587,26 @@ void CDecodingPipeline::PrintPerFrameStat(bool force)
 
         m_timer_overall.Sync();
 
-        fps = (m_tick_overall)? m_output_count/CTimer::ConvertToSeconds(m_tick_overall): 0.0;
+		/* Account for MVC having two views. */
+		mfxU32 frames = m_output_count;
+		if (m_bIsMVC) {
+			frames /= 2;
+		}
+
+        fps = (m_tick_overall)? frames/CTimer::ConvertToSeconds(m_tick_overall): 0.0;
         fps_fread = (m_tick_fread)? m_output_count/CTimer::ConvertToSeconds(m_tick_fread): 0.0;
         fps_fwrite = (m_tick_fwrite)? m_output_count/CTimer::ConvertToSeconds(m_tick_fwrite): 0.0;
         // decoding progress
-        msdk_printf(MSDK_STRING("Frame number: %4d, fps: %0.3f, fread_fps: %0.3f, fwrite_fps: %.3f\r"),
-            m_output_count,
+        msdk_printf(MSDK_STRING("Frame number: %4d, fps: %0.3f\r"),
+            frames,
+            fps);
+/*
+		msdk_printf(MSDK_STRING("Frame number: %4d, fps: %0.3f, fread_fps: %0.3f, fwrite_fps: %.3f\r"),
+            frames,
             fps,
             (fps_fread < MY_THRESHOLD)? fps_fread: 0.0,
             (fps_fwrite < MY_THRESHOLD)? fps_fwrite: 0.0);
+*/
         fflush(NULL);
 #if D3D_SURFACES_SUPPORT
         m_d3dRender.UpdateTitle(fps);
