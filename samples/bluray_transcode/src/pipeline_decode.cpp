@@ -1664,7 +1664,7 @@ mfxStatus CDecodingPipeline::RunDecoding(CEncodingPipeline *pEncPipeline)
     time_t start_time = time(0);
     MSDKThread * pDeliverThread = NULL;
 
-	pEncodePipeline = pEncPipeline;
+	//pEncodePipeline = pEncPipeline;
 
     if (m_eWorkMode == MODE_RENDERING) {
         m_pDeliverOutputSemaphore = new MSDKSemaphore(sts);
@@ -1951,6 +1951,11 @@ mfxStatus CDecodingPipeline::RunDecoding(CEncodingPipeline *pEncPipeline)
     }
 
     return sts; // ERR_NONE or ERR_INCOMPATIBLE_VIDEO_PARAM
+}
+
+mfxFrameInfo CDecodingPipeline::GetFrameInfo()
+{
+	return m_mfxVideoParams.mfx.FrameInfo;
 }
 
 void CDecodingPipeline::PrintInfo()

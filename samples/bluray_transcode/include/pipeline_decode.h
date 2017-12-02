@@ -181,8 +181,7 @@ public:
     void SetExtBuffersFlag()       { m_bIsExtBuffers = true; }
     virtual void PrintInfo();
 
-private:
-	CEncodingPipeline *pEncodePipeline;
+	mfxFrameInfo GetFrameInfo();
 
 protected: // functions
     virtual mfxStatus CreateRenderingWindow(sInputParams *pParams, bool try_s3d);

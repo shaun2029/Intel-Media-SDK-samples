@@ -1015,7 +1015,7 @@ CEncodingPipeline* CreatePipeline(const sEncInputParams& params)
 
 
 #if defined(_WIN32) || defined(_WIN64)
-int SetupEncoder(int argc, msdk_char *argv[], int argPos, CEncodingPipeline*& pPipeline, CFrameFifo *pFrameFifo)
+int SetupEncoder(int argc, msdk_char *argv[], int argPos, mfxFrameInfo *pFrameInfo, CEncodingPipeline*& pPipeline, CFrameFifo *pFrameFifo)
 #else
 int SetupEncoder(int argc, char *argv[])
 #endif
@@ -1024,7 +1024,11 @@ int SetupEncoder(int argc, char *argv[])
 
     mfxStatus sts = MFX_ERR_NONE; // return value check
 
-    sts = ParseInputString(argv, (mfxU8)argc, (mfxU8)argPos, &Params);
+	Params.dFrameRate = CalculateFrameRate(pFrameInfo->FrameRateExtN, pFrameInfo->FrameRateExtD);
+	Params.nWidth = pFrameInfo->Width;
+	Params.nHeight = pFrameInfo->Height;
+	
+	sts = ParseInputString(argv, (mfxU8)argc, (mfxU8)argPos, &Params);
     MSDK_CHECK_PARSE_RESULT(sts, MFX_ERR_NONE, 1);
 
     // Choosing which pipeline to use
