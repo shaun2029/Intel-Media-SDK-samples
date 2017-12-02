@@ -821,13 +821,39 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 	int size;
 	//void* pData, 
 	mfxU32 i;
+	PMemFrame pFrame = NULL;
+	mfxU8 *pMemData;
 
     mfxFrameInfo &pInfo = pSurface->Info;
     mfxFrameData &pData = pSurface->Data;
 
-	void *pMem = malloc(pInfo.BufferSize);
-	mfxU8 *pMemData = (mfxU8*)pMem;
-	if (pMem) {
+	/* Get any idle frames to reuse. */
+	Lock();
+	size = frameIdleQueue.size();
+	UnLock();
+	if (size) {
+		Lock();
+		pFrame = frameIdleQueue.front();
+		frameIdleQueue.pop();
+		UnLock();
+	}
+
+	/* Free frame if it is not the correct size. */
+	if ((pFrame) && (pFrame->length !=  pInfo.BufferSize)) {
+		free(pFrame->data);
+		free(pFrame);
+		pFrame = NULL;
+	}
+	
+	if (!pFrame) {
+		pFrame = (PMemFrame)malloc(sizeof(MemFrame));
+		pFrame->data = malloc(pInfo.BufferSize);
+		pFrame->length = pInfo.BufferSize;
+	}
+
+	if (pFrame->data) {
+		pMemData = (mfxU8*)pFrame->data;
+
 		for (i = 0; i < pInfo.CropH; i++)
 		{
 			memcpy(pMemData, pData.Y + (pInfo.CropY * pData.Pitch + pInfo.CropX)+ i * pData.Pitch, (size_t)pInfo.CropW);
@@ -839,10 +865,6 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 			memcpy(pMemData, pData.UV + (pInfo.CropY * pData.Pitch / 2 + pInfo.CropX / 2) + i * pData.Pitch, (size_t)pInfo.CropW);
 			pMemData += pInfo.CropW;
 		}
-
-		PMemFrame pFrame = (PMemFrame)malloc(sizeof(MemFrame));
-		pFrame->data = pMem;
-		pFrame->length = pInfo.BufferSize;
 
 		while (1) {
 			Lock();
@@ -892,9 +914,10 @@ bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 					memcpy(pData.UV + (pInfo.CropY * pData.Pitch / 2 + pInfo.CropX / 2) + i * pData.Pitch, pMemData, (size_t)pInfo.CropW);
 					pMemData += pInfo.CropW;
 				}
-				free(pFrame->data);
 			}
-			free(pFrame);
+			Lock();
+			frameIdleQueue.push(pFrame);
+			UnLock();
 
 			res = true;
 			break;

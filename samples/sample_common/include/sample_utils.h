@@ -124,6 +124,7 @@ class CFrameFifo
 		HANDLE hMutex;
 		mfxU32 MaxFrames;
 		queue <PMemFrame> frameQueue;
+		queue <PMemFrame> frameIdleQueue;
 		void Lock() { WaitForSingleObject(hMutex, INFINITE); };
 		void UnLock() { ReleaseMutex(hMutex); };
 };
