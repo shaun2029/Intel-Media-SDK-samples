@@ -854,7 +854,6 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 			}
 			break;
 		}
-		UnLock();
 		MSDK_SLEEP(1);
 	}
 }
@@ -863,6 +862,7 @@ bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 	bool res = false;
 	int size;
 	int timeout = 1000;
+	PMemFrame pFrame = NULL;
 
 	mfxU32 i;
 
@@ -871,13 +871,12 @@ bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 
 	while (timeout) {
 		Lock();
-		size = frameQueue.size();
-		UnLock();
-		if (size > 0) {
-			Lock();
-			PMemFrame pFrame = frameQueue.front();
+		if (frameQueue.size()) {
+			pFrame = frameQueue.front();
 			frameQueue.pop();
-			UnLock();
+		}
+		UnLock();
+		if (pFrame) {
 			if (pFrame->data) {
 				mfxU8 *pMemData = (mfxU8*)pFrame->data;
 
@@ -899,7 +898,6 @@ bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 			res = true;
 			break;
 		}
-		UnLock();
 		MSDK_SLEEP(1);
 		timeout--;
 	}
