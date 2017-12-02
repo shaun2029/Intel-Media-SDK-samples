@@ -109,6 +109,7 @@ bool IsPluginCodecSupported(mfxU32 codecFormat);
 struct MemFrame {
 	void *data;
 	mfxU32 length;
+	mfxFrameInfo info;
 };
 
 typedef MemFrame *PMemFrame;

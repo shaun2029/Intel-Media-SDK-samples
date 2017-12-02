@@ -779,7 +779,6 @@ int main(int argc, char *argv[])
     Pipeline.PrintInfo();
 
 	mfxFrameInfo frameInfo = Pipeline.GetFrameInfo();
-
 	SetupEncoder(argc, argv, argPos, &frameInfo, pPipelineEncode, &MemFrames);
 
     // Create the thread to begin execution on its own.

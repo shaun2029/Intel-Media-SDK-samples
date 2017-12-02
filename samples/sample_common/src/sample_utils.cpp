@@ -852,6 +852,7 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 	}
 
 	if (pFrame->data) {
+		pFrame->info = pSurface->Info;
 		pMemData = (mfxU8*)pFrame->data;
 
 		for (i = 0; i < pInfo.CropH; i++)
@@ -903,15 +904,15 @@ bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 			if (pFrame->data) {
 				mfxU8 *pMemData = (mfxU8*)pFrame->data;
 
-				for (i = 0; i < pInfo.CropH; i++)
+				for (i = 0; i < pFrame->info.CropH; i++)
 				{
-					memcpy(pData.Y + (pInfo.CropY * pData.Pitch + pInfo.CropX)+ i * pData.Pitch, pMemData, (size_t)pInfo.CropW);
+					memcpy(pData.Y + (pInfo.CropY * pData.Pitch + pInfo.CropX) + (i * pData.Pitch), pMemData, (size_t)pInfo.CropW);
 					pMemData += pInfo.CropW;
 				}
 
-				for (i = 0; i < (mfxU32) pInfo.CropH/2; i++)
+				for (i = 0; i < (mfxU32) pFrame->info.CropH/2; i++)
 				{
-					memcpy(pData.UV + (pInfo.CropY * pData.Pitch / 2 + pInfo.CropX / 2) + i * pData.Pitch, pMemData, (size_t)pInfo.CropW);
+					memcpy(pData.UV + (pInfo.CropY * pData.Pitch / 2 + pInfo.CropX / 2) + (i * pData.Pitch), pMemData, (size_t)pInfo.CropW);
 					pMemData += pInfo.CropW;
 				}
 			}
