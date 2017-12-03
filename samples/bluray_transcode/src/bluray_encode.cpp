@@ -1012,7 +1012,20 @@ mfxStatus SetupEncoder(int argc, char *argv[])
 
 	Params.dFrameRate = CalculateFrameRate(pFrameInfo->FrameRateExtN, pFrameInfo->FrameRateExtD);
 	Params.nWidth = pFrameInfo->Width;
-	Params.nHeight = pFrameInfo->Height;
+
+	/* TODO: Height seems worng, needs more work to fix properly.
+	 * e.g. 1080 -> 1088, 720 -> 738 ????
+	 * Workaround by using cases based on width. */
+	switch (Params.nWidth) {
+	case 1280:
+		Params.nHeight = 720;
+	case 1920:
+		Params.nHeight = 1080;
+	default:
+		Params.nHeight = pFrameInfo->Height;
+		break;
+	}
+	
 	Params.CodecLevel = 41;
 	Params.nBRefType = MFX_B_REF_OFF;
 	Params.bUseHWLib = true;
