@@ -814,15 +814,39 @@ CFrameFifo::CFrameFifo()
 
 CFrameFifo::~CFrameFifo()
 {
+	while(frameQueue.size()) {
+		PMemFrame pFrame = frameQueue.front();
+		frameQueue.pop();
+		if (!pFrame) {
+			if (pFrame->data) {
+				free(pFrame->data);
+			}
+			free(pFrame);
+		}
+	}
+
+	while(frameIdleQueue.size()) {
+		PMemFrame pFrame = frameIdleQueue.front();
+		frameIdleQueue.pop();
+		if (!pFrame) {
+			if (pFrame->data) {
+				free(pFrame->data);
+			}
+			free(pFrame);
+		}
+	}
+
 	CloseHandle(hMutex);
 }
 
-void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
+bool CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
+	bool res = true;
 	int size;
 	//void* pData, 
 	mfxU32 i;
 	PMemFrame pFrame = NULL;
 	mfxU8 *pMemData;
+	int timeout = 2000;
 
     mfxFrameInfo &pInfo = pSurface->Info;
     mfxFrameData &pData = pSurface->Data;
@@ -847,7 +871,7 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 	
 	if (!pFrame) {
 		pFrame = (PMemFrame)malloc(sizeof(MemFrame));
-		pFrame->data = malloc(pInfo.BufferSize);
+		pFrame->data = calloc(1, pInfo.BufferSize);
 		pFrame->length = pInfo.BufferSize;
 	}
 
@@ -867,7 +891,7 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 			pMemData += pInfo.CropW;
 		}
 
-		while (1) {
+		while (timeout) {
 			Lock();
 			size = frameQueue.size();
 			UnLock();
@@ -878,14 +902,27 @@ void CFrameFifo::Push(mfxFrameSurface1 *pSurface) {
 				break;
 			}
 			MSDK_SLEEP(1);
+			timeout--;
+		}
+
+		if (!timeout) {
+			if (pFrame) {
+				if (pFrame->data) {
+					free(pFrame->data);
+				}
+				free(pFrame);
+			}
+			res = false;
 		}
 	}
+
+	return res;
 }
 
 bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
-	bool res = false;
+	bool res = true;
 	int size;
-	int timeout = 1000;
+	int timeout = 2000;
 	PMemFrame pFrame = NULL;
 
 	mfxU32 i;
@@ -919,8 +956,6 @@ bool CFrameFifo::Pop(mfxFrameSurface1 *pSurface) {
 			Lock();
 			frameIdleQueue.push(pFrame);
 			UnLock();
-
-			res = true;
 			break;
 		}
 		MSDK_SLEEP(1);
@@ -1062,7 +1097,9 @@ mfxStatus CSmplYUVWriter::WriteNextFrame(mfxFrameSurface1 *pSurface)
         case MFX_FOURCC_YV12:
         case MFX_FOURCC_NV12:
 		if(pMemFrames) {
-			pMemFrames->Push(pSurface);
+			if (!pMemFrames->Push(pSurface)) {
+				return MFX_WRN_DEVICE_BUSY;
+			}
 		} 
 		else {
 			for (i = 0; i < pInfo.CropH; i++)

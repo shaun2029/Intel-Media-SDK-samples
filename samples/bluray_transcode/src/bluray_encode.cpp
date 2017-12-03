@@ -652,18 +652,6 @@ static mfxStatus ParseInputString(msdk_char* strInput[], mfxU8 nArgNum, mfxU8 ar
                     msdk_printf(MSDK_STRING("error: option '-f' expects an argument\n"));
                 }
                 break;
-            case MSDK_CHAR('n'):
-                if (++i < nArgNum) {
-                    if (MFX_ERR_NONE != msdk_opt_read(strInput[i], pParams->nNumFrames))
-                    {
-                        PrintHelp(strInput[0], MSDK_STRING("Number of frames to process is invalid"));
-                        return MFX_ERR_UNSUPPORTED;
-                    }
-                }
-                else {
-                    msdk_printf(MSDK_STRING("error: option '-n' expects an argument\n"));
-                }
-                break;
             case MSDK_CHAR('b'):
                 if (++i < nArgNum) {
                     if (MFX_ERR_NONE != msdk_opt_read(strInput[i], pParams->nBitRate))
@@ -1013,9 +1001,9 @@ CEncodingPipeline* CreatePipeline(const sEncInputParams& params)
 
 
 #if defined(_WIN32) || defined(_WIN64)
-int SetupEncoder(int argc, msdk_char *argv[], int argPos, mfxFrameInfo *pFrameInfo, CEncodingPipeline*& pPipeline, CFrameFifo *pFrameFifo)
+mfxStatus SetupEncoder(int argc, msdk_char *argv[], int argPos, mfxFrameInfo *pFrameInfo, CEncodingPipeline*& pPipeline, CFrameFifo *pFrameFifo)
 #else
-int SetupEncoder(int argc, char *argv[])
+mfxStatus SetupEncoder(int argc, char *argv[])
 #endif
 {
     sEncInputParams Params = {0};   // input parameters from command line
@@ -1039,6 +1027,7 @@ int SetupEncoder(int argc, char *argv[])
 	Params.nNumSlice = 1;
 
 	sts = ParseInputString(argv, (mfxU8)argc, (mfxU8)argPos, &Params);
+    MSDK_CHECK_STATUS(sts, "Encoder options incorrect");
 
     // calculate default bitrate based on the resolution (a parameter for encoder, so Dst resolution is used)
     if (!Params.nBitRate)
@@ -1058,11 +1047,8 @@ int SetupEncoder(int argc, char *argv[])
 		Params.MaxKbps = 42000;
 	}
 
-    MSDK_CHECK_PARSE_RESULT(sts, MFX_ERR_NONE, 1);
-
     // Choosing which pipeline to use
     pPipeline = CreatePipeline(Params);
-
     MSDK_CHECK_POINTER(pPipeline, MFX_ERR_MEMORY_ALLOC);
 
     if (MVC_ENABLED & Params.MVC_flags)
@@ -1075,40 +1061,10 @@ int SetupEncoder(int argc, char *argv[])
 
     pPipeline->PrintInfo();
 
-    msdk_printf(MSDK_STRING("Processing started\n"));
+    sts = pPipeline->CaptureStartV4L2Pipeline();
+    MSDK_CHECK_STATUS(sts, "V4l2 failure terminating the program");
 
-    if (pPipeline->CaptureStartV4L2Pipeline() != MFX_ERR_NONE)
-    {
-        msdk_printf(MSDK_STRING("V4l2 failure terminating the program\n"));
-        return 0;
-    }
-/*
-    for (;;)
-    {
-        sts = pPipeline->Run();
+	msdk_printf(MSDK_STRING("Encoder initialised\n"));
 
-        if (MFX_ERR_DEVICE_LOST == sts || MFX_ERR_DEVICE_FAILED == sts)
-        {
-            msdk_printf(MSDK_STRING("\nERROR: Hardware device was lost or returned an unexpected error. Recovering...\n"));
-            sts = pPipeline->ResetDevice();
-            MSDK_CHECK_STATUS(sts, "pPipeline->ResetDevice failed");
-
-            sts = pPipeline->ResetMFXComponents(&Params);
-            MSDK_CHECK_STATUS(sts, "pPipeline->ResetMFXComponents failed");
-            continue;
-        }
-        else
-        {
-            MSDK_CHECK_STATUS(sts, "pPipeline->Run failed");
-            break;
-        }
-    }
-
-    pPipeline->CaptureStopV4L2Pipeline();
-
-    pPipeline->Close();
-
-    msdk_printf(MSDK_STRING("\nProcessing finished\n"));
-*/
-    return 0;
+    return sts;
 }

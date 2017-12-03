@@ -62,8 +62,7 @@ void PrintHelp(msdk_char *strAppName, const msdk_char *strErrorMessage)
     
 	msdk_printf(MSDK_STRING("Decode Options:\n"));
 	msdk_printf(MSDK_STRING("   [-di bob/adi]             - enable deinterlacing BOB/ADI\n"));
-    msdk_printf(MSDK_STRING("   [-w]                      - output width\n"));
-    msdk_printf(MSDK_STRING("   [-h]                      - output height\n"));
+    msdk_printf(MSDK_STRING("   [-n number] - number of frames to process\n"));
 	msdk_printf(MSDK_STRING("\n"));
     msdk_printf(MSDK_STRING("\n"));
 
@@ -72,7 +71,6 @@ void PrintHelp(msdk_char *strAppName, const msdk_char *strErrorMessage)
     msdk_printf(MSDK_STRING("   [-bref] - arrange B frames in B pyramid reference structure\n"));
     msdk_printf(MSDK_STRING("   [-nobref] -  do not use B-pyramid (by default the decision is made by library). enabled by default.\n"));
     msdk_printf(MSDK_STRING("   [-idr_interval size] - idr interval, default 0 means every I is an IDR, 1 means every other I frame is an IDR etc\n"));
-    msdk_printf(MSDK_STRING("   [-n number] - number of frames to process\n"));
     msdk_printf(MSDK_STRING("   [-b bitRate] - encoded bit rate (Kbits per second), valid for H.264, H.265, MPEG2 and MVC encoders \n"));
     msdk_printf(MSDK_STRING("   [-u speed|quality|balanced] - target usage, valid for H.264, H.265, MPEG2 and MVC encoders.\n"));
     msdk_printf(MSDK_STRING("   [-r distance] - Distance between I- or P- key frames (1 means no B-frames) \n"));
@@ -754,10 +752,15 @@ int main(int argc, char *argv[])
     mfxStatus sts = MFX_ERR_NONE; // return value check
 
     sts = ParseInputString(argv, (mfxU8)argc, &argPos, &Params);
-    MSDK_CHECK_PARSE_RESULT(sts, MFX_ERR_NONE, 1);
+    MSDK_CHECK_STATUS(sts, "Decoder options incorrect");
 
     if (Params.bIsMVC)
         Pipeline.SetMultiView();
+
+	/* Multiview required twice the number of frames. */
+	if (Params.bIsMVC) {
+		Params.nFrames *= 2;
+	}
 
 	sts = Pipeline.Init(&Params, &MemFrames);
     MSDK_CHECK_STATUS(sts, "Pipeline.Init failed");
@@ -766,7 +769,8 @@ int main(int argc, char *argv[])
     Pipeline.PrintInfo();
 
 	mfxFrameInfo frameInfo = Pipeline.GetFrameInfo();
-	SetupEncoder(argc, argv, argPos, &frameInfo, pPipelineEncode, &MemFrames);
+	sts = SetupEncoder(argc, argv, argPos, &frameInfo, pPipelineEncode, &MemFrames);
+    MSDK_CHECK_STATUS(sts, "Pipeline.Init failed");
 
     // Create the thread to begin execution on its own.
 

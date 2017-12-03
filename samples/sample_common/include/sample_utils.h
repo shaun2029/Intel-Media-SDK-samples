@@ -119,7 +119,7 @@ class CFrameFifo
 	public:
 		CFrameFifo();
 		~CFrameFifo();
-		void Push(mfxFrameSurface1 *pSurface); 
+		bool Push(mfxFrameSurface1 *pSurface); 
 		bool Pop(mfxFrameSurface1 *pSurface); 
 	private:
 		HANDLE hMutex;
