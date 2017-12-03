@@ -1019,8 +1019,10 @@ mfxStatus SetupEncoder(int argc, char *argv[])
 	switch (Params.nWidth) {
 	case 1280:
 		Params.nHeight = 720;
+		break;
 	case 1920:
 		Params.nHeight = 1080;
+		break;
 	default:
 		Params.nHeight = pFrameInfo->Height;
 		break;
